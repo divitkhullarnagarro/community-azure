@@ -3,7 +3,7 @@
     "instancePath": "C:\\inetpub\\wwwroot\\sctestsc.dev.local",
     "apiKey": "79FEE958-BF31-4206-84E8-0A66D488B470",
     "deploySecret": "u2rdrplnavjtuvw5goflvz7e4dokwkxfowzjh4zbhcg",
-    "deployUrl": "https://e345-146-196-34-159.in.ngrok.io/sitecore/api/jss/import",
-    "layoutServiceHost": "https://e345-146-196-34-159.in.ngrok.io"
+    "deployUrl": "https://a9f4-103-214-60-116.in.ngrok.io/sitecore/api/jss/import",
+    "layoutServiceHost": "https://a9f4-103-214-60-116.in.ngrok.io"
   }
 }
