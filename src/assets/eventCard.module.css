@@ -1,0 +1,86 @@
+.ConferenceEventContainer {
+    display: flex;
+    flex-direction: row;
+    height: 290px;
+    box-shadow: 0 0 5px #888;
+    margin: 20px;
+    border-radius: 12px;
+    background-color: aliceblue;
+}
+
+.leftContainer {
+    width: 425px;
+    height: 290px;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.5));
+    background-size: cover;
+    border-bottom-left-radius: 8px;
+    border-top-left-radius: 8px;
+}
+
+.rightContainer {
+    padding: 25px;
+    width: 100%;
+    background-color: white;
+    border-bottom-right-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.head {
+    height: 50%;
+}
+
+.heading {
+    font-size: 32px;
+    overflow: hidden;
+}
+
+.description {
+    font-size: 18px;
+    overflow: hidden;
+    height: 145px;
+    word-wrap: break-word;
+}
+
+.date {
+    font-size: 12px;
+    color: red;
+    font-weight: 600;
+}
+
+.eventType {
+    position: relative;
+    left: 20%;
+    top: 50%;
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.interestedButton {
+    border: 1px solid #47D7AC;
+    color: #47D7AC;
+    border-radius: 5px;
+    background-color: white;
+    padding: 5px;
+    margin-top: 5px;
+}
+
+@media only screen and (max-width: 640px) {
+    .heading {
+        font-size: 18px;
+        overflow: hidden;
+    }
+
+    .description {
+        font-size: 12px;
+        overflow: hidden;
+        height: 145px;
+        word-wrap: break-word;
+    }
+
+    .date {
+        font-size: 8px;
+        color: red;
+        font-weight: 600;
+    }
+}

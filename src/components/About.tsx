@@ -2,6 +2,9 @@ import { Field } from '@sitecore-jss/sitecore-jss-nextjs';
 import { ComponentProps } from 'lib/component-props';
 import Accordion from 'react-bootstrap/Accordion';
 import styles from '../assets/about.module.css';
+import Skeleton from 'react-loading-skeleton'
+import { useEffect, useState } from 'react';
+import 'react-loading-skeleton/dist/skeleton.css'
 
 type AboutProps = ComponentProps & {
   fields: {
@@ -34,6 +37,31 @@ const aboutContentList = [
 
 const About = (props: AboutProps): JSX.Element => {
   console.log('EditProfile', props);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  useEffect(()=>{const Interval= setTimeout(()=>{setIsDataLoaded(true)},2000)
+  return()=> clearInterval(Interval)},[])
+  const AboutSkeleton= () => {
+    return (
+      <div className={styles.aboutContainer}>
+        <Skeleton className='mb-2' height={30}/>
+        <Accordion defaultActiveKey={['0']} alwaysOpen>
+          {aboutContentList.map((index) => {
+            return (
+              <Accordion.Item className={styles.accordionItem} eventKey={index.toString()}>
+                <div className='p-3 pb-0'>
+                  <Skeleton height={30}/>
+                </div>
+                <div className='p-3'>
+                  <Skeleton height={80}/>
+                </div>
+              </Accordion.Item>
+            );
+          })}
+        </Accordion>
+      </div>
+    );
+  }
+const About= () => {
   return (
     <div className={styles.aboutContainer}>
       <h3 className={styles.aboutHeader}>About</h3>
@@ -42,13 +70,16 @@ const About = (props: AboutProps): JSX.Element => {
           return (
             <Accordion.Item className={styles.accordionItem} eventKey={index.toString()}>
               <Accordion.Header className={styles.accordionHeader}>{item.Header}</Accordion.Header>
-              <Accordion.Body>{item.Body}</Accordion.Body>
+              <Accordion.Body className={styles.accordionBody}>{item.Body}</Accordion.Body>
             </Accordion.Item>
           );
         })}
       </Accordion>
     </div>
   );
+}
+
+return(<>{isDataLoaded?<About/>:<AboutSkeleton/>}</>)
 };
 
 export default About;

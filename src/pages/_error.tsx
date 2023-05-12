@@ -1,3 +1,4 @@
+import Page500 from 'src/500';
 import { NextPage } from 'next';
 import Head from 'next/head';
 
@@ -15,13 +16,12 @@ const ErrorPage: NextPage<ErrorPageProps> = ({ statusCode }) => (
       <title>Error</title>
     </Head>
     <div style={{ padding: 10 }}>
-      <h1>An error occurred</h1>
       <p>
         {statusCode
-          ? `A server-side ${statusCode} error occurred.`
-          : 'A client-side error occurred.'}
+          ? <Page500 statusCode={statusCode}/>
+          : <Page500 statusCode={'A client-side error occurred.'}/>
+          }
       </p>
-      <a href="/">Go to the Home page</a>
     </div>
   </>
 );

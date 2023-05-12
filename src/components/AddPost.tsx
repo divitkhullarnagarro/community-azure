@@ -1,25 +1,95 @@
 import { Field, NextImage } from '@sitecore-jss/sitecore-jss-nextjs';
 import { ComponentProps } from 'lib/component-props';
-import { ReactElement, useContext, useEffect, useState } from 'react';
+import { ReactElement, useContext, useEffect, useRef, useState } from 'react';
 import { withSitecoreContext } from '@sitecore-jss/sitecore-jss-nextjs';
 import Form from 'react-bootstrap/Form';
 import WebContext from '../Context/WebContext';
-import { useRouter } from 'next/router';
 import Button from 'react-bootstrap/Button';
 import Collapse from 'react-bootstrap/Collapse';
 import likePostCall from '../API/likePostCall';
-import getAllPostsCall from '../API/getAllPostsCall';
+// import getAllPostsCall from '../API/getAllPostsCall';
 import Spinner from 'react-bootstrap/Spinner';
 import getPostByIdCall from '../API/getPostByIdCall';
 import addPostCall from '../API/addPostCall';
-import getUserCall from 'src/API/getUserCall';
 import addPostCommentCall from 'src/API/addPostCommentCall';
-// import loginUserCall from 'src/API/loginUserCall';
 import Link from 'next/link';
 import ShowShareCss from '../assets/ShowShare.module.css';
 import linkedin from '../assets/images/linkedin.png';
 import twitter from '../assets/images/twitter.png';
 import whatsapp from '../assets/images/whatsapp.png';
+import facebook from '../assets/images/facebook.svg';
+import { Dropdown, Modal } from 'react-bootstrap';
+import { ReportPostOptionsTypeLabel, ReportUserOptionsTypeLabel } from 'assets/helpers/enums';
+import styles from '../assets/addPost.module.css';
+import reportPostImage from '../assets/images/flag-icon.svg';
+import bookmarkImage from '../assets/images/bookmark-outline.svg';
+import copylink from '../assets/images/copylink.svg';
+import reportPostCall from 'src/API/reportPostCall';
+import uploadFilesCall from 'src/API/uploadFilesCall';
+import ToastNotification from './ToastNotification';
+import getCommentsCall from 'src/API/getCommentsCall';
+import getCommentsReplyCall from 'src/API/getCommentsReplyCall';
+import postCommentReplyCall from 'src/API/postCommentReplyCall';
+import downVote from '../assets/images/dislikeIcon.svg';
+import CreateModalPopup from './helperComponents/CreateModalPopup';
+import AxiosRequest from 'src/API/AxiosRequest';
+import { editCommentUrl, viewProfileLinkUrl, voteInPollUrl } from '../assets/helpers/constants';
+import videoIcon from '../assets/images/AddVideo_icon.svg';
+import pollIcon from '../assets/images/CreatePoll_icon.svg';
+import addBlogIcon from '../assets/images/AddBlogPost_icon.svg';
+import createEventIcon from '../assets/images/CreateEventPost_icon.svg';
+import pollCross from '../assets/images/pollCross.svg';
+// import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
+
+// Rich Text Editor Files Import Start
+import { EditorState, convertToRaw } from 'draft-js';
+import { EditorProps } from 'react-draft-wysiwyg';
+import parser from 'html-react-parser';
+import dynamic from 'next/dynamic';
+import draftToHtml from 'draftjs-to-html';
+import { toolbar } from 'assets/helpers/constants';
+import allPeersCall from 'src/API/getPeers';
+import { modifyHtml } from 'assets/helpers/helperFunctions';
+
+const Editor = dynamic<EditorProps>(() => import('react-draft-wysiwyg').then((mod) => mod.Editor), {
+  ssr: false,
+});
+// Rich Text Editor Files Import End
+
+import Deleteimage from '../assets/images/deleteImg.png';
+import BlockUserImage from '../assets/images/BlockUser.jpg';
+import React from 'react';
+// import upVoteCall from 'src/API/upVote';
+// import downVoteCall from 'src/API/downVote';
+import getAllDownVotesCall from 'src/API/getAllDownVotesCall';
+import getAllUpVotesCall from 'src/API/getAllUpVotes';
+import Profile from '../assets/images/profile.png';
+import addPostCss from '../assets/addPosts.module.css';
+import blockUserCall from 'src/API/blockUnblockUserCall';
+import user from '../assets/images/ProfilePic.jpeg';
+// import location from '../assets/images/Location.png';
+import image from '../assets/images/Vector.png';
+import pin from '../assets/images/Vectorpin.png';
+// import smile from '../assets/images/Vectorsmile.png';
+import like from '../assets/images/like.png';
+import comment from '../assets/images/comment.png';
+import share from '../assets/images/share.png';
+import greylikeimage from '../assets/images/greylikeimage.svg';
+import EventCard from './EventCard';
+import PollCard from './PollCard';
+import deletePostCall from 'src/API/deletePostCall';
+import deleteCommentCall from 'src/API/deleteCommentCall';
+// import articleIcon from '../assets/images/ArticleIcon.svg';
+// import PollCard from './PollCard';
+import reportUserCall from 'src/API/reportUserCall';
+import { useRouter } from 'next/router';
+import AddPostSkeleton from './skeletons/AddPostSkeleton';
+import darkModeCss from '../assets/darkTheme.module.css';
+
+//logging on logrocket
+import LogRocket from 'logrocket';
+import ViewPostDescription from './helperComponents/ViewPostDescription';
 
 type AddPostProps = ComponentProps & {
   fields: {
@@ -27,94 +97,240 @@ type AddPostProps = ComponentProps & {
   };
 };
 
+type BlockUserFields = {
+  objectId: string;
+  firstName: string;
+  lastName: string;
+};
+
 const AddPost = (props: AddPostProps | any): JSX.Element => {
-  props; //delete me
-  const { userToken, setUserToken, objectId, userObject, setUserObject } = {
+  const { userToken, objectId, userObject, darkMode } = {
     ...useContext(WebContext),
   };
 
-  // useEffect(() => {
-  //   loginUserCall('nishantemail@gmail.com', 'Nishant1@').then((response) => {
-  //     if (setUserToken !== undefined && typeof localStorage !== 'undefined') {
-  //       setUserToken(response?.data?.data?.access_token);
-  //       localStorage.setItem('UserToken', response?.data?.data?.access_token);
-  //     }
-  //   });
-  // }, []);
+  //theme changes
+  useEffect(() => {
+    postStructCreate();
+  }, [darkMode]);
 
-  const router = useRouter();
+  //logging on logrocket start
+  useEffect(() => {
+    LogRocket.init('5m0bj8/communitysolution');
+    LogRocket.identify(userObject?.email, {
+      name: `${userObject?.firstName} ${userObject?.lastName}`,
+      email: userObject?.email,
+
+      // Add your own custom user variables here, ie:
+      subscriptionType: 'pro',
+    });
+    // LogRocket.track('Button Clicked', {
+    //   buttonName: 'Submit',
+    //   formId: 'signupForm',
+    // });
+  }, []);
+  // logging on logrocket end
+  interface ItemImage {
+    [key: string]: string;
+  }
+
+  const EventImage: ItemImage = {
+    Seminar:
+      'https://higherlogicdownload.s3.amazonaws.com/APSNET/UploadedImages/tAiEB79vTYq1gz2UEGu1_IMG_2866-L.jpg',
+    Conference: 'https://th.bing.com/th/id/OIP.IXdC6XgETCp5RaM3iQCb6QHaE8?pid=ImgDet&rs=1',
+    Announcement: 'https://th.bing.com/th/id/OIP.zPaWJzUBQwbXDjhCtCtI1gHaE8?pid=ImgDet&rs=1',
+    'Launch Event': 'https://live.staticflickr.com/808/39724254630_e9cdcb8e77_b.jpg',
+    Celebration: 'https://th.bing.com/th/id/OIP.E1RiHHXMHUcq0L0KvprXfQHaEn?pid=ImgDet&rs=1',
+  };
+
   const [showForm1, setShowForm1] = useState(false);
-  let myPostArray: ReactElement<any, any>[] = [];
-  let [posts, setPosts] = useState(myPostArray);
-  // let [postItems, setPostItems] = useState<any>('');
-
-  let [postText, setPostText] = useState('');
-  // let [postHeading, setPostHeading] = useState('');
-
+  const myPostArray: ReactElement<any, any>[] = [];
+  const [posts, setPosts] = useState(myPostArray);
+  const [postText, setPostText] = useState('');
   const [file, setFile] = useState([]);
   const [docs, setDocs] = useState([]);
   const [videoLink, setVideoLink] = useState([]);
+  const [eventPost, setEventPost] = useState<any>('');
+  const [pollPost, setPollPost] = useState<any>('');
+  const [myAnotherArr, setMyAnotherArr] = useState<any>([]);
+  const [postPageNum, setPostPageNum] = useState(0);
+  const [ifReachedEnd, setIfReachedEnd] = useState(false);
+  const [ifNoMoreData, setIfNoMoreData] = useState(false);
+  const [allUpVotes, setAllUpVotes] = useState([]);
+  const [allDownVote, setAllDownVote] = useState([]);
+  const [showUp, setShowup] = useState('up');
+  const [showDeletePostPopup, setShowDeletePostPopup] = useState(false);
+  const [showDeleteCommentPopup, setShowDeleteCommentPopup] = useState(false);
+  const [modalForData, setModalForData] = useState(false);
+  // const [allReactions, setAllReactions] = useState([]);
+  const [showEvent, setShowEvent] = useState(false);
+  const [eventType, setEventType] = useState('Select Event Type');
+  const [disableAddImage, setDisableAddImage] = useState(false);
+  const [disableAddVideo, setDisableAddVideo] = useState(false);
+  const [disableAddDoc, setDisableAddDoc] = useState(false);
+  const [disableAddEvent, setDisableAddevent] = useState(false);
+  const [disableAddPoll, setDisableAddPoll] = useState(false);
+  const [globalPostType, setGlobalPostType] = useState('TEXT_POST');
+  const [isEditorHidden, setIsEditorVisible] = useState(false);
 
-  let [myArr, setMyArr] = useState<postsType>({ posts: [] });
-  let [myAnotherArr, setMyAnotherArr] = useState<any>([]);
-  let [postPageNum, setPostPageNum] = useState(0);
-  let [ifReachedEnd, setIfReachedEnd] = useState(false);
-  let [ifNoMoreData, setIfNoMoreData] = useState(false);
-  let [createNewPostError, setCreateNewPostError] = useState(false);
-  // let [userName, setUserName] = useState('');
-
-  let isExpEditorActive = props?.sitecoreContext?.pageEditing;
-
-  // function getNameFromToken(token: any) {
-  //   const [header, payload, signature] = token.split('.');
-  //   header;
-  //   signature;
-  //   const decodedPayload = atob(payload);
-  //   const parsedPayload = JSON.parse(decodedPayload);
-  //   return parsedPayload;
-  // }
+  const router = useRouter();
 
   useEffect(() => {
-    if (userToken == '' && !isExpEditorActive) {
-      if (
-        typeof localStorage !== 'undefined' &&
-        localStorage.getItem('UserToken') != '' &&
-        localStorage.getItem('UserToken') != null
-      ) {
-        let token = localStorage.getItem('UserToken');
-        if (token != null && setUserToken != undefined) {
-          setUserToken(token);
-        }
-      } else router.push('/login');
+    props?.params?.withoutEditor ? setIsEditorVisible(true) : '';
+  }, [props]);
+
+  useEffect(() => {
+    if (file.length || docs.length || videoLink.length || eventPost != '' || pollPost != '') {
+      if (file.length) {
+        setDisableAddVideo(true);
+        setDisableAddDoc(true);
+        setDisableAddevent(true);
+        setDisableAddPoll(true);
+        setGlobalPostType('IMAGE');
+      } else if (docs.length) {
+        setDisableAddImage(true);
+        setDisableAddVideo(true);
+        setDisableAddevent(true);
+        setDisableAddPoll(true);
+        setGlobalPostType('DOC');
+      } else if (videoLink.length) {
+        setDisableAddImage(true);
+        setDisableAddDoc(true);
+        setDisableAddevent(true);
+        setDisableAddPoll(true);
+        setGlobalPostType('VIDEO');
+      } else if (eventPost != '') {
+        setDisableAddImage(true);
+        setDisableAddVideo(true);
+        setDisableAddDoc(true);
+        setDisableAddevent(true);
+        setDisableAddPoll(true);
+        setGlobalPostType('EVENT');
+      } else if (pollPost != '') {
+        setDisableAddImage(true);
+        setDisableAddVideo(true);
+        setDisableAddDoc(true);
+        setDisableAddevent(true);
+        setDisableAddPoll(true);
+        setGlobalPostType('POLL');
+      }
+    } else {
+      setDisableAddImage(false);
+      setDisableAddVideo(false);
+      setDisableAddDoc(false);
+      setDisableAddevent(false);
+      setDisableAddPoll(false);
+      setGlobalPostType('TEXT_POST');
     }
+  }, [videoLink, file, docs, eventPost, pollPost]);
+
+  const [editorState, setEditorState] = useState(() => EditorState.createEmpty());
+  const [addedPeers, setAddedPeers] = useState<string[]>([] as string[]);
+  const [mentionUserData, setMentionUserData] = useState<
+    {
+      text: string;
+      value: string;
+      url: string;
+    }[]
+  >([] as { text: string; value: string; url: string }[]);
+  // const currentCount = editorState.getCurrentContent().getPlainText().length;
+
+  const getAllPears = async () => {
+    const res = await allPeersCall(userToken);
+    const data = res.data.data;
+    const userData = data.map((ele: any) => {
+      return {
+        text: ele.firstName + ' ' + ele.lastName,
+        value: ele.firstName + ' ' + ele.lastName,
+        url: '/profile/' + ele.objectId,
+        objectId: ele.objectId,
+      };
+    });
+    setMentionUserData(userData);
+  };
+  useEffect(() => {
+    getAllPears();
   }, []);
 
   useEffect(() => {
-    getUserCall(userToken, objectId).then((response) => {
-      if (setUserObject != undefined) {
-        setUserObject(response?.data?.data);
+    const rawEditorContent = convertToRaw(editorState.getCurrentContent());
+    const entityMap = rawEditorContent.entityMap;
+    const addedPeerList = new Set<string>();
+    Object.values(entityMap).map((entity) => {
+      if (entity?.data?.url?.substring(0, 8) === '/profile') {
+        addedPeerList.add(entity?.data?.url?.substring(9, entity?.data?.url?.length));
       }
     });
+    const addedpeersList = [...addedPeerList.values()];
+    setAddedPeers(addedpeersList);
+  }, [editorState]);
+
+  const onEditorStateChangeHandler = (e: any) => {
+    setEditorState(e);
+    setPostTextValue(draftToHtml(convertToRaw(editorState.getCurrentContent())));
+  };
+
+  useEffect(() => {
+    if (userToken == '' && typeof window !== 'undefined') {
+      if (
+        typeof localStorage === 'undefined' ||
+        localStorage.getItem('UserToken') == '' ||
+        localStorage.getItem('UserToken') == null
+      ) {
+        const params = new URLSearchParams(window?.location?.search);
+        let scMode = params.get('sc_mode');
+        if (scMode != 'preview' && scMode != 'edit') {
+          router.push('/login');
+        }
+      }
+    }
   }, []);
 
   useEffect(() => {
     postStructCreate();
-  }, [myArr, myAnotherArr]);
+  }, [myAnotherArr]);
+
+  const [id, setId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const { query } = router;
+    const idValue = query.id as string;
+    setId(idValue);
+  }, [router]);
 
   useEffect(() => {
     if (userToken != '' && userToken != undefined) {
-      getAllPostsCall(userToken, postPageNum).then((response: any) => {
-        let newArr = response?.data?.data;
-        let empArr: any[] = [];
-        newArr?.map((post: any) => {
-          post.isOpenComment = false;
-          post.comments = empArr;
-          post.showShare = false;
+      AxiosRequest({
+        method: 'GET',
+        url: `${props?.params?.URL}?${id ? `id=${id}&` : ''}page=${postPageNum}&size=10`,
+      })
+        .then((response: any) => {
+          const newArr = response?.data;
+          newArr?.map((post: any) => {
+            post.isOpenComment = false;
+            post.comments = [];
+            post.showShare = false;
+            post.isLoadingComments = false;
+            if (post.postMeasures == null || post.postMeasures == 'undefined') {
+              post.postMeasures = {
+                commentCount: 0,
+                likeCount: 0,
+              };
+            }
+          });
+          setMyAnotherArr(newArr);
+        })
+        .catch((err: any) => {
+          if (err === 'API Call Failed !') {
+            setMyAnotherArr([
+              {
+                postType: 'ERRORPOST',
+                description: 'Microservice URL Configuration Incorrect !',
+              },
+            ]);
+          }
         });
-        setMyAnotherArr(newArr);
-      });
     }
-  }, [userToken]);
+  }, [props]);
 
   useEffect(() => {
     if (ifNoMoreData == true) {
@@ -132,17 +348,336 @@ const AddPost = (props: AddPostProps | any): JSX.Element => {
     }
   }, [ifReachedEnd]);
 
+  const [showReportPopUp, setShowReportPopUp] = useState(false);
+  const [reportPostId, setReportPostId] = useState('');
+  const [reportPostType, setReportPostType] = useState('');
+  const [showNotification, setShowNofitication] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string>();
+  const [toastSuccess, setToastSuccess] = useState(false);
+  const [toastError, setToastError] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [showSpinner, setShowSpinner] = useState(false);
+  const [showBlockUserPopUp, setShowBlockUserPopUp] = useState(false);
+  const [selectedBlockUserItem, setSelectedBlockUserItem] = useState<BlockUserFields>();
+  const [showReportUserPopUp, setShowReportUserPopUp] = useState(false);
+
+  function getEventImage(eventType: string) {
+    let itemImage =
+      'https://chinchincelebration.com/wp-content/uploads/2019/08/product-launch-events-min.png';
+    props?.fields?.data?.datasource?.eventType?.targetItems?.map((item: any) => {
+      if (item?.title?.jsonValue?.value === eventType) {
+        itemImage = item?.image?.jsonValue?.value?.href
+          ? item?.image?.jsonValue?.value?.href
+          : 'https://chinchincelebration.com/wp-content/uploads/2019/08/product-launch-events-min.png';
+      }
+    });
+    return itemImage;
+  }
+
+  const ReportUserPopup = () => {
+    const reportTypeList = Object.values(ReportUserOptionsTypeLabel);
+    return (
+      <>
+        <Modal
+          className={styles.reportPostModalContent}
+          show={showReportUserPopUp}
+          onHide={() => setShowReportUserPopUp(false)}
+          backdrop="static"
+          keyboard={false}
+          centered
+          scrollable={true}
+        >
+          <div>
+            <Modal.Header closeButton>
+              <Modal.Title className={styles.reportPostModalHeader}>
+                {props?.fields?.data?.datasource?.reportPostTitle?.jsonValue?.value ?? 'Report'}
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <div className={styles.reportPostModalBody}>
+                {props?.fields?.data?.datasource?.reportPostHeader?.jsonValue?.value ??
+                  'Why are you reporting?'}
+              </div>
+              <Form ref={formRef} style={{ fontSize: '15px', margin: '5px' }}>
+                {reportTypeList.map((item, index) => {
+                  return (
+                    <div key={index} className={styles.reportItem}>
+                      {item}
+                      <Form.Check
+                        type="radio"
+                        name="radioGroup"
+                        value={item}
+                        onChange={(e) => handleSelectChange(e)}
+                        defaultChecked={index == 0 ? true : false}
+                        aria-label="radio 1"
+                      ></Form.Check>
+                    </div>
+                  );
+                })}
+              </Form>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                className={styles.footerBtnCancel}
+                variant="default"
+                onClick={() => setShowReportUserPopUp(false)}
+              >
+                Cancel
+              </Button>
+              <Button className={styles.footerBtn} variant="secondary" onClick={onUserReported}>
+                Report
+                {showSpinner ? (
+                  <Spinner style={{ marginLeft: '5px', width: '30px', height: '30px' }} />
+                ) : (
+                  <></>
+                )}
+              </Button>
+            </Modal.Footer>
+          </div>
+        </Modal>
+      </>
+    );
+  };
+
+  const onUserReported = async () => {
+    setShowSpinner(true);
+    let reportReason = '';
+    if (formRef.current != null) {
+      reportReason = (
+        formRef.current.querySelector('input[name="radioGroup"]:checked') as HTMLInputElement
+      )?.value;
+    }
+    const response = await reportUserCall(selectedBlockUserItem?.objectId, reportReason, userToken);
+    if (response) {
+      if (response?.success) {
+        setToastSuccess(true);
+        setToastMessage(response?.data);
+      } else {
+        setToastError(true);
+        setToastMessage(response?.errorCode);
+      }
+      setShowNofitication(true);
+    }
+    setShowReportUserPopUp(false);
+    setShowSpinner(false);
+  };
+
+  const onUserBlocked = async () => {
+    setShowSpinner(true);
+    const response = await blockUserCall(userToken, selectedBlockUserItem?.objectId);
+    if (response) {
+      if (response?.success) {
+        setToastSuccess(true);
+        setToastMessage(response?.data);
+      } else {
+        setToastError(true);
+        setToastMessage(response?.errorCode);
+      }
+      setShowNofitication(true);
+    }
+    setShowBlockUserPopUp(false);
+    setShowSpinner(false);
+  };
+
+  // const handleUpvote = (commentId: string) => {
+  //   upVoteCall(userToken, commentId);
+  // };
+  // const handleDownvote = (commentId: string) => {
+  //   downVoteCall(userToken, commentId);
+  // };
+  const BlockUserPopup = () => {
+    return (
+      <>
+        <Modal
+          className={styles.reportPostModalContent}
+          show={showBlockUserPopUp}
+          onHide={() => setShowBlockUserPopUp(false)}
+          backdrop="static"
+          keyboard={false}
+          centered
+          scrollable={true}
+        >
+          <div>
+            <Modal.Header closeButton>
+              <Modal.Title className={styles.reportPostModalHeader}>{'Block User'}</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <div
+                className={styles.blockuserModalBody}
+              >{`Do you want to block ${selectedBlockUserItem?.firstName} ${selectedBlockUserItem?.lastName} ?`}</div>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button
+                className={styles.footerBtnCancel}
+                variant="default"
+                onClick={() => {
+                  setShowBlockUserPopUp(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button className={styles.footerBtn} variant="secondary" onClick={onUserBlocked}>
+                Block
+                {showSpinner ? (
+                  <Spinner style={{ marginLeft: '5px', width: '30px', height: '30px' }} />
+                ) : (
+                  <></>
+                )}
+              </Button>
+            </Modal.Footer>
+          </div>
+        </Modal>
+      </>
+    );
+  };
+
+  async function copyTextToClipboard(postId: string) {
+    const postUrl = window.location.origin + '/post/' + postId;
+    if ('clipboard' in navigator) {
+      return await navigator.clipboard.writeText(postUrl);
+    } else {
+      return document.execCommand('copy', true, postUrl);
+    }
+  }
+
+  const copyPostLinkToClipboard = (postId: string) => {
+    copyTextToClipboard(postId)
+      .then(() => {
+        setToastSuccess(true);
+        setToastMessage('Post url copied to clipboard');
+        setShowNofitication(true);
+      })
+      .catch((err) => {
+        setToastError(true);
+        setToastMessage(err?.message ?? 'Something went wrong');
+        setShowNofitication(true);
+        console.log(err);
+      });
+  };
+
+  const showReportPostPopup = () => {
+    setShowReportPopUp(true);
+  };
+
+  const handleClose = () => {
+    setShowReportPopUp(false);
+  };
+
+  const handleSelectChange = (event: any) => {
+    console.log(event);
+  };
+
+  const ReportPostPopup = () => {
+    const reportTypeList = Object.values(ReportPostOptionsTypeLabel);
+    return (
+      <>
+        <Modal
+          className={styles.reportPostModalContent}
+          show={showReportPopUp}
+          onHide={handleClose}
+          backdrop="static"
+          keyboard={false}
+          centered
+          scrollable={true}
+        >
+          <div>
+            <Modal.Header closeButton>
+              <Modal.Title className={styles.reportPostModalHeader}>
+                {props?.fields?.data?.datasource?.reportPostTitle?.jsonValue?.value ?? 'Report'}
+              </Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+              <div className={styles.reportPostModalBody}>
+                {props?.fields?.data?.datasource?.reportPostHeader?.jsonValue?.value ??
+                  'Why are you reporting this?'}
+              </div>
+              <Form ref={formRef} style={{ fontSize: '15px', margin: '5px' }}>
+                {reportTypeList.map((item, index) => {
+                  return (
+                    <div key={index} className={styles.reportItem}>
+                      {item}
+                      <Form.Check
+                        type="radio"
+                        name="radioGroup"
+                        value={item}
+                        onChange={(e) => handleSelectChange(e)}
+                        defaultChecked={index == 0 ? true : false}
+                        aria-label="radio 1"
+                      ></Form.Check>
+                    </div>
+                  );
+                })}
+              </Form>
+            </Modal.Body>
+            <Modal.Footer>
+              <Button className={styles.footerBtnCancel} variant="default" onClick={handleClose}>
+                Cancel
+              </Button>
+              <Button className={styles.footerBtn} variant="secondary" onClick={onPostReported}>
+                Report
+                {showSpinner ? (
+                  <Spinner style={{ marginLeft: '5px', width: '30px', height: '30px' }} />
+                ) : (
+                  <></>
+                )}
+              </Button>
+            </Modal.Footer>
+          </div>
+        </Modal>
+      </>
+    );
+  };
+
+  const resetToastState = () => {
+    setShowNofitication(!showNotification);
+    setToastSuccess(false);
+    setToastError(false);
+  };
+
+  const onPostReported = async () => {
+    setShowSpinner(true);
+    let reportReason = '';
+    if (formRef.current != null) {
+      reportReason = (
+        formRef.current.querySelector('input[name="radioGroup"]:checked') as HTMLInputElement
+      )?.value;
+    }
+
+    const response = await reportPostCall(reportPostId, reportPostType, reportReason, userToken);
+    if (response) {
+      if (response?.success) {
+        setToastSuccess(true);
+        setToastMessage(response?.data);
+      } else {
+        setToastError(true);
+        setToastMessage(response?.errorCode);
+      }
+      setShowNofitication(true);
+      setShowReportPopUp(false);
+      setShowSpinner(false);
+    }
+  };
+
   function LoadMorePosts() {
     setPostPageNum((prev) => {
       return prev + 1;
     });
-    getAllPostsCall(userToken, postPageNum + 1).then((response: any) => {
-      if (response?.data?.data?.length != 0 && response?.data?.data?.length) {
-        let newArr = response?.data?.data;
+    AxiosRequest({
+      method: 'GET',
+      url: `${props?.params?.URL}?page=${postPageNum + 1}&size=10`,
+    }).then((response: any) => {
+      if (response?.data?.length != 0 && response?.data?.length) {
+        const newArr = response?.data;
         newArr?.map((post: any) => {
           post.isOpenComment = false;
           post.comments = [];
           post.showShare = false;
+          if (post.postMeasures === null || post.postMeasures == 'undefined') {
+            post.postMeasures = {
+              commentCount: 0,
+              likeCount: 0,
+            };
+          }
         });
         setMyAnotherArr((prevState: any[]) => {
           return [...prevState, ...newArr];
@@ -174,90 +709,30 @@ const AddPost = (props: AddPostProps | any): JSX.Element => {
     setPostText(e);
   }
 
-  // function setPostHeadingValue(e: any) {
-  //   setPostHeading(e);
-  // }
-
   function generateUniqueId() {
     const timestamp = Date.now();
     const random = Math.random() * Math.pow(10, 18);
     return `${timestamp}-${random}`;
   }
 
-  interface comments {
-    id: string;
-    commentToId: string;
-    nameOfCommentor: string;
-    dateAndTime: string;
-    commentString: string;
-  }
-
-  interface posts {
-    id: string;
-    // heading: string;
-    postText: string;
-    imageArray: any[];
-    docArray: any[];
-    videoArray: any[];
-    likes: any;
-    disLikes: string[];
-    comments: comments[];
-    showComments: boolean;
-  }
-
-  interface postsType {
-    posts: posts[];
-  }
-
-  // const initialPosts: postsType = {
-  //   posts: [
-  //     {
-  //       id: '1231221',
-  //       heading: 'Default Post heading',
-  //       postText: 'Default Post Text',
-  //       imageArray: [],
-  //       docArray: [],
-  //       videoArray: [],
-  //       likes: 0,
-  //       disLikes: [],
-  //       showComments: false,
-  //       comments: [
-  //         {
-  //           id: '',
-  //           commentToId: '',
-  //           nameOfCommentor: '',
-  //           dateAndTime: '',
-  //           commentString: '',
-  //         },
-  //       ],
-  //     },
-  //   ],
-  // };
-
   //Function To Handle Likes
   function LikePost(id: any) {
-    // let locArr = myArr.posts;
-    // let modPost = locArr.map((post: any) => {
-    //   if (post.id == id) {
-    //     post.likes++;
-    //     return post;
-    //   } else {
-    //     return post;
-    //   }
-    // });
-    // setMyArr(() => {
-    //   return { posts: modPost };
-    // });
-    let locArr = myAnotherArr;
-    let modPost = locArr.map((post: any) => {
+    const locArr = myAnotherArr;
+    let ifLikedAlready = false;
+    const modPost = locArr.map((post: any) => {
       if (post.id == id) {
-        post.isLikedByUser = true;
-        if (typeof post?.postMeasures?.likeCount === 'number') {
-          post.postMeasures.likeCount = (post.postMeasures.likeCount ?? 0) + 1;
+        if (post.isLikedByUser) {
+          ifLikedAlready = true;
+          return post;
         } else {
-          post.postMeasures.likeCount = 1;
+          post.isLikedByUser = true;
+          if (typeof post?.postMeasures?.likeCount === 'number') {
+            post.postMeasures.likeCount = (post.postMeasures.likeCount ?? 0) + 1;
+          } else {
+            post.postMeasures.likeCount = (post.postMeasures.likeCount ?? 0) + 1;
+          }
+          return post;
         }
-        return post;
       } else {
         return post;
       }
@@ -265,47 +740,35 @@ const AddPost = (props: AddPostProps | any): JSX.Element => {
     setMyAnotherArr(() => {
       return modPost;
     });
-    likePostCall(userToken, id).then((response) => {
-      if (response?.data?.success == true) {
-        let locArr = myAnotherArr;
-        let modPost = locArr.map((post: any) => {
-          if (post.id == id) {
-            post.isLikedByUser = true;
-            if (typeof post?.postMeasures?.likeCount === 'number') {
-              post.postMeasures.likeCount = (post.postMeasures.likeCount ?? 0) + 1;
+    if (!ifLikedAlready) {
+      likePostCall(userToken, id).then((response) => {
+        if (response?.data?.success == true) {
+          const locArr = myAnotherArr;
+          const modPost = locArr.map((post: any) => {
+            if (post.id == id) {
+              post.isLikedByUser = true;
+              if (typeof post?.postMeasures?.likeCount === 'number') {
+                post.postMeasures.likeCount = (post.postMeasures.likeCount ?? 0) + 1;
+              } else {
+                post.postMeasures.likeCount = (post.postMeasures.likeCount ?? 0) + 1;
+              }
+              return post;
             } else {
-              post.postMeasures.likeCount = (post.postMeasures.likeCount ?? 0) + 1;
+              return post;
             }
-            return post;
-          } else {
-            return post;
-          }
-        });
-        setMyAnotherArr(() => {
-          return modPost;
-        });
-      }
-    });
+          });
+          setMyAnotherArr(() => {
+            return modPost;
+          });
+        }
+      });
+    }
   }
-
-
 
   //Function To Handle Open Comments Tray
   function setOpenComments(id: string, show: boolean) {
-    // let locArr = myArr.posts;
-    // let modPost = locArr.map((post: any) => {
-    //   if (post.id == id) {
-    //     post.showComments = show;
-    //     return post;
-    //   } else {
-    //     return post;
-    //   }
-    // });
-    // setMyArr(() => {
-    //   return { posts: modPost };
-    // });
-    let locArr = myAnotherArr;
-    let modPost = locArr.map((post: any) => {
+    const locArr = myAnotherArr;
+    const modPost = locArr.map((post: any) => {
       if (post.id == id) {
         post.isOpenComment = show;
         return post;
@@ -316,519 +779,1630 @@ const AddPost = (props: AddPostProps | any): JSX.Element => {
     setMyAnotherArr(() => {
       return modPost;
     });
+    // loadComments(id);
   }
   function handleShowShare(id: string, val: any) {
-    let locArr = myAnotherArr;
-    console.log('asdsad', myAnotherArr);
-    let modPost = locArr.map((post: any) => {
+    const locArr = myAnotherArr;
+    const modPost = locArr.map((post: any) => {
       if (post.id == id) {
-        
-       
-          post.showShare = val;
-      
+        post.showShare = val;
+
         return post;
       } else {
         return post;
       }
     });
     setMyAnotherArr(() => {
-      console.log('abv', modPost);
       return modPost;
     });
   }
- 
+
   //Function To Handle Post Comments
-  function postComments(id: string, e: any) {
+  async function postComments(id: string, e: any) {
     e.preventDefault();
 
-    let locArr = myAnotherArr;
-    addPostCommentCall(userToken, id, e.target[0].value);
-    let modPost = locArr.map((post: any) => {
-      if (post.id == id) {
-        post?.comments?.push({
-          id: 'Unique Id For Each Comment',
-          commentToId: id,
-          nameOfCommentor: 'Will Be Extracted From Token Value',
-          dateAndTime: 'Current Date Time',
-          commentString: e.target[0].value,
-        });
-        if (typeof post?.postMeasures?.commentCount === 'number') {
-          post.postMeasures.commentCount = (post.postMeasures.commentCount ?? 0) + 1;
+    const commStr = e.target[0].value;
+    e.currentTarget.reset();
+    const uniqId = generateUniqueId();
+    const timestamp = new Date().getTime();
+    const obj = {
+      id: uniqId,
+      createdBy: { ...userObject },
+      text: commStr,
+      replies: [],
+      isOpenReply: false,
+      createdOn: timestamp,
+      isRespPending: true,
+      isLoadingReplies: false,
+      isEditOn: false,
+    };
+    setMyAnotherArr((prevState: any) => {
+      const updatedPosts = prevState.map((post: any) => {
+        if (post.id === id) {
+          const updatedComments = [obj, ...post.comments];
+          if (typeof post?.postMeasures?.commentCount === 'number') {
+            post.postMeasures.commentCount = (post.postMeasures.commentCount ?? 0) + 1;
+          } else {
+            post.postMeasures.commentCount = (post.postMeasures.commentCount ?? 0) + 1;
+          }
+          return { ...post, comments: updatedComments };
         } else {
-          post.postMeasures.commentCount = (post.postMeasures.commentCount ?? 0) + 1;
+          return post;
+        }
+      });
+      return updatedPosts;
+    });
+    const resp = await addPostCommentCall(userToken, id, commStr);
+    if (!resp?.data?.data) {
+      deleteCommentFromPost(id, uniqId);
+    }
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.map((post: any) => {
+        if (post?.id === id) {
+          const updatedComments = post.comments.map((comment: any) => {
+            if (comment.id === uniqId) {
+              return {
+                ...comment,
+                id: resp?.data?.data,
+                isRespPending: false,
+              };
+            }
+            return comment;
+          });
+          return {
+            ...post,
+            comments: updatedComments,
+          };
         }
         return post;
-      } else {
+      });
+    });
+  }
+
+  const getAllupVotesAndDownVotes = (comeendId: string) => {
+    Promise.all([
+      getAllUpVotesCall(userToken, comeendId),
+      getAllDownVotesCall(userToken, comeendId),
+    ])
+      .then((response) => {
+        console.log(response);
+        setAllUpVotes(response[0]?.data?.data);
+        setAllDownVote(response[1]?.data?.data);
+        setModalForData(true);
+      })
+      .catch((error: any) => {
+        console.log(error);
+      });
+  };
+
+  // useEffect(()=>{
+
+  // },[allDownVote,allDownVote])
+
+  function deleteCommentFromPost(postId: string, commentId: string) {
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.map((post: any) => {
+        if (typeof post?.postMeasures?.commentCount === 'number') {
+          post.postMeasures.commentCount = (post.postMeasures.commentCount ?? 0) - 1;
+        } else {
+          post.postMeasures.commentCount = (post.postMeasures.commentCount ?? 0) - 1;
+        }
+        if (post?.id === postId) {
+          const updatedComments = post.comments.filter((comment: any) => {
+            if (comment.id === commentId && comment.isDeleted !== true) {
+              return false;
+            }
+            return true;
+          });
+          return {
+            ...post,
+            comments: updatedComments,
+          };
+        }
         return post;
+      });
+    });
+  }
+
+  function deleteReplyFromComment(postId: string, commentId: string, replyId: string) {
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.map((post: any) => {
+        if (post?.id === postId) {
+          const updatedComments = post.comments.map((comment: any) => {
+            if (comment.id === commentId) {
+              const updatedReplies = comment.replies.filter((reply: any) => {
+                if (reply.id === replyId && reply.isDeleted !== true) {
+                  return false;
+                }
+                return true;
+              });
+              const updatedComment = {
+                ...comment,
+                replies: updatedReplies,
+              };
+              return updatedComment;
+            }
+            return comment;
+          });
+          return {
+            ...post,
+            comments: updatedComments,
+          };
+        }
+        return post;
+      });
+    });
+  }
+
+  const [deletePostId, setDeletePostId] = useState('');
+  const [deleteCommentId, setDeleteCommentId] = useState<any>('');
+
+  //For Comment
+  const confirmationForDeleteComment = (id: any) => {
+    setDeleteCommentId('');
+    setShowDeleteCommentPopup(false);
+    deleteCommentByApi(id);
+  };
+
+  //Delete Comment Call
+  async function deleteCommentByApi(id: any) {
+    let resp: any = '';
+    if (id.replyId) {
+      resp = await deleteCommentCall(userToken, id?.replyId);
+    } else {
+      resp = await deleteCommentCall(userToken, id?.commentId);
+    }
+    if (resp?.data?.success === true) {
+      if (id?.replyId) {
+        deleteReplyFromComment(id?.postId, id?.commentId, id?.replyId);
+        setShowNofitication(true);
+        setToastSuccess(true);
+        setToastMessage('Reply Deleted Successfully !');
+      } else {
+        deleteCommentFromPost(id?.postId, id?.commentId);
+        setShowNofitication(true);
+        setToastSuccess(true);
+        setToastMessage('Comment Deleted Successfully !');
+      }
+    }
+  }
+
+  //For Post
+  const confirmationForDelete = (id: any) => {
+    setDeletePostId('');
+    setShowDeletePostPopup(false);
+    deletePostByApi(id);
+  };
+
+  //Delete Post Call
+  async function deletePostByApi(id: any) {
+    const resp = await deletePostCall(userToken, id);
+    if (resp?.data?.success === true) {
+      deletePostById(id);
+      setShowNofitication(true);
+      setToastSuccess(true);
+      setToastMessage('Post Deleted Successfully !');
+    }
+  }
+
+  //Edit Comment Open
+  function commentEditOn(postId: any, commentId: any, show: boolean) {
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.map((post: any) => {
+        if (post?.id === postId) {
+          const updatedComments = post?.comments?.map((comment: any) => {
+            if (comment.id === commentId) {
+              return {
+                ...comment,
+                isEditOn: show,
+              };
+            }
+            return comment;
+          });
+          return {
+            ...post,
+            comments: updatedComments,
+          };
+        }
+        return post;
+      });
+    });
+  }
+
+  //Edit Update Reply Open
+  function replyEditOn(postId: any, commentId: any, replyId: any, show: boolean) {
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.map((post: any) => {
+        if (post?.id === postId) {
+          const updatedComments = post?.comments?.map((comment: any) => {
+            if (comment.id === commentId) {
+              const updatedReplies = comment?.replies?.map((reply: any) => {
+                if (replyId === reply?.id) {
+                  return {
+                    ...reply,
+                    isEditOn: show,
+                  };
+                }
+                return reply;
+              });
+              return {
+                ...comment,
+                replies: updatedReplies,
+              };
+            }
+            return comment;
+          });
+          return {
+            ...post,
+            comments: updatedComments,
+          };
+        }
+        return post;
+      });
+    });
+  }
+
+  //Edit Reply
+  async function editReply(event: any, postId: any, commentId: any, replyId: any) {
+    event.preventDefault();
+    const editReply = event?.target[0].value;
+    replyEditOn(postId, commentId, replyId, false);
+    updateReply(postId, commentId, replyId, editReply);
+    await AxiosRequest({
+      method: 'PUT',
+      url: editCommentUrl,
+      data: { id: replyId, text: editReply },
+    });
+  }
+
+  //Update Reply with edited text
+  function updateReply(postId: any, commentId: any, replyId: any, updatedString: any) {
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.map((post: any) => {
+        if (post?.id === postId) {
+          const updatedComments = post?.comments?.map((comment: any) => {
+            if (comment.id === commentId) {
+              const updatedReplies = comment?.replies?.map((reply: any) => {
+                if (reply.id === replyId) {
+                  return {
+                    ...reply,
+                    text: updatedString,
+                  };
+                }
+                return reply;
+              });
+              return {
+                ...comment,
+                replies: updatedReplies,
+              };
+            }
+            return comment;
+          });
+          return {
+            ...post,
+            comments: updatedComments,
+          };
+        }
+        return post;
+      });
+    });
+  }
+
+  //Edit Update Comment Open
+  function updateComment(postId: any, commentId: any, updatedString: any) {
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.map((post: any) => {
+        if (post?.id === postId) {
+          const updatedComments = post?.comments?.map((comment: any) => {
+            if (comment.id === commentId) {
+              return {
+                ...comment,
+                text: updatedString,
+              };
+            }
+            return comment;
+          });
+          return {
+            ...post,
+            comments: updatedComments,
+          };
+        }
+        return post;
+      });
+    });
+  }
+
+  //Edit Comment
+  async function editComment(event: any, postId: any, commentId: any) {
+    event.preventDefault();
+    const editComm = event?.target[0].value;
+    commentEditOn(postId, commentId, false);
+    updateComment(postId, commentId, editComm);
+    await AxiosRequest({
+      method: 'PUT',
+      url: editCommentUrl,
+      data: { id: commentId, text: editComm },
+    });
+  }
+
+  //Function for Voting in a poll
+  const voteInAPoll = async (pollId: any, pollOptionId: any) => {
+    updatePollPost(pollId, pollOptionId);
+    await AxiosRequest({
+      method: 'PUT',
+      url: `${voteInPollUrl}${pollId}/poll-option/${pollOptionId}`,
+    });
+  };
+
+  //Function to update with latest data of poll
+  function updatePollPost(pollId: any, pollOptionId: any) {
+    const updatedPollPosts = myAnotherArr.map((pollPost: any) => {
+      if (pollPost?.poll?.id === pollId) {
+        const updatedPollOptions = pollPost?.poll?.pollOptions?.map((option: any) => {
+          if (option?.id === pollOptionId) {
+            const updatedOption = { ...option };
+            updatedOption.responseCount = updatedOption.responseCount + 1 || 1;
+            return updatedOption;
+          } else {
+            return option;
+          }
+        });
+        return {
+          ...pollPost,
+          poll: {
+            ...pollPost.poll,
+            pollResponseCount: pollPost?.poll?.pollResponseCount
+              ? pollPost?.poll?.pollResponseCount + 1
+              : 1,
+            pollOptions: updatedPollOptions,
+            optedPollOptionID: pollOptionId,
+          },
+        };
+      } else {
+        return pollPost;
       }
     });
-    setMyAnotherArr(() => {
-      return modPost;
-    });
-
-    e.currentTarget.reset();
+    setMyAnotherArr(updatedPollPosts);
   }
 
   //Function To Handle Posts Feed and Construct React.jsx using data
   function postStructCreate() {
-    const currentDate: Date = new Date();
-    const year: number = currentDate.getFullYear();
-    const month: number = currentDate.getMonth() + 1;
-    const day: number = currentDate.getDate();
-
-    let locArr: ReactElement<any, any>[] = [];
-    let locArr2: ReactElement<any, any>[] = [];
-    myArr?.posts?.map((post: any, num: any) => {
-      locArr.push(
+    const locArr2: ReactElement<any, any>[] = [];
+    myAnotherArr?.map((post: any) => {
+      locArr2.push(
         <>
-          <div className="postContainer" key={num}>
-            <div className="postHeading">
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-                alt="User-Pic"
-                width="60px"
-              ></img>
-              <div className="postDetailContainer">
-                <h5 className="postOwner mt-2" style={{ fontWeight: '1000' }}>
-                  John Doe
-                </h5>
-                <h6 className="postDate" style={{ fontWeight: '1000' }}>
-                  Created On :{' '}
-                  <span style={{ fontWeight: '100' }}>{`${day}-${month}-${year}`}</span>
-                </h6>
+          {post?.postType === 'ERRORPOST' ? (
+            <div className={`postContainer ${darkMode ? darkModeCss.grey_2 : ''}`} key={post?.id}>
+              <div style={{ padding: '40px', fontSize: '36px' }}>
+                {post.description}{' '}
+                <div style={{ color: 'red', fontSize: '12px' }}>
+                  Check Component rendering parameter : "MicoserviceURL"
+                </div>
               </div>
             </div>
-            <hr />
-            <h3 style={{ fontWeight: '1000' }}>{post?.heading}</h3>
-            <div className="postContent">{post?.postText}</div>
-            {/* <img src={postImage} alt="Post Image" /> */}
-            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-              {post.imageArray?.map((img: any, num: any) => {
-                return (
-                  <>
-                    <div key={num}>
-                      <img width="300px" src={img.value} alt={num}></img>
-                    </div>
-                  </>
-                );
-              })}
-              <div className="docPreviewContainer">
-                {post.docArray?.map((doc: any, num: any) => {
-                  return (
-                    <>
-                      <span className="openPrevButton">
-                        <button
-                          onClick={() => openDoc(doc.value)}
-                          style={{
-                            padding: '5px',
-                            borderRadius: '20px',
-                            borderColor: 'white',
+          ) : (
+            <div className={`postContainer ${darkMode ? darkModeCss.grey_2 : ''}`} key={post?.id}>
+              <div className="postHeading">
+                <div className="postHeaderLeft">
+                  <Link passHref={true} href={`${viewProfileLinkUrl}${post?.createdBy?.objectId}`}>
+                    <img
+                      className="postUserImage"
+                      src={
+                        post?.createdBy?.profilePictureUrl
+                          ? post?.createdBy?.profilePictureUrl
+                          : user.src
+                      }
+                      alt="User-Pic"
+                    ></img>
+                  </Link>
+
+                  <div className="postDetailContainer">
+                    <h5 className={`postOwner ${darkMode ? darkModeCss.text_green : ''}`}>
+                      <span>
+                        {post?.createdBy?.firstName ? post?.createdBy?.firstName : 'Unknown'}
+                      </span>
+                      &nbsp;
+                      <span>{post?.createdBy?.lastName ? post?.createdBy?.lastName : 'User'}</span>
+                    </h5>
+                    <h6 className="postCreateDate">
+                      <img
+                        width="9px"
+                        src="https://cdn-icons-png.flaticon.com/512/2088/2088617.png"
+                        alt="post time"
+                        style={darkMode ? { filter: 'invert(1)', opacity: 1 } : {}}
+                      ></img>
+                      <span>
+                        {post?.createdOn != 0 &&
+                        post?.createdOn &&
+                        post?.createdOn != undefined &&
+                        post?.createdOn != null
+                          ? calculateTimeDifference(post?.createdOn)
+                          : 'Recently'}
+                      </span>
+                    </h6>
+                  </div>
+                </div>
+                <div className="postHeaderRight">
+                  <Dropdown>
+                    <Dropdown.Toggle
+                      variant="secondary"
+                      id="dropdown-basic"
+                      className={styles.dropdownBtn}
+                    >
+                      <button
+                        onClick={() => {
+                          setReportPostId(post?.id);
+                          setReportPostType(post?.postType);
+                        }}
+                        style={{
+                          border: 'none',
+                          backgroundColor: 'transparent',
+                          padding: '0',
+                        }}
+                      >
+                        <img
+                          className="postMoreOptionsImage"
+                          src="https://cdn-icons-png.flaticon.com/512/463/463292.png"
+                          alt="pan"
+                        />
+                      </button>
+                    </Dropdown.Toggle>
+
+                    <Dropdown.Menu
+                      className={`${styles.dropdownMenu} ${darkMode ? darkModeCss.grey_1 : ''}`}
+                    >
+                      <Dropdown.Item
+                        className={`${styles.dropdownItem} ${darkMode ? darkModeCss.grey_2 : ''}`}
+                      >
+                        <div className={styles.overlayItem}>
+                          <div
+                            className={`${styles.dropdownImage} ${
+                              darkMode ? darkModeCss.invertFilter : ''
+                            }`}
+                          >
+                            <NextImage field={bookmarkImage} editable={true} />
+                          </div>
+                          <div className={styles.reportContainerBtn}>Save Post</div>
+                        </div>
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        className={`${styles.dropdownItem} ${darkMode ? darkModeCss.grey_2 : ''}`}
+                        onClick={() => {
+                          copyPostLinkToClipboard(post?.id);
+                        }}
+                      >
+                        <div className={styles.overlayItem}>
+                          <div
+                            className={`${styles.dropdownImage} ${
+                              darkMode ? darkModeCss.invertFilter : ''
+                            }`}
+                          >
+                            <NextImage field={copylink} editable={true} />
+                          </div>
+                          <div className={styles.reportContainerBtn}>Copy link to post</div>
+                        </div>
+                      </Dropdown.Item>
+                      {post?.createdBy?.objectId !== objectId ? (
+                        <>
+                          <Dropdown.Item
+                            className={`${styles.dropdownItem} ${
+                              darkMode ? darkModeCss.grey_2 : ''
+                            }`}
+                            onClick={() => {
+                              showReportPostPopup();
+                            }}
+                          >
+                            <div className={styles.overlayItem}>
+                              <div
+                                className={`${styles.dropdownImage} ${
+                                  darkMode ? darkModeCss.invertFilter : ''
+                                }`}
+                              >
+                                <NextImage field={reportPostImage} editable={true} />
+                              </div>
+                              <div className={styles.reportContainerBtn}>Report Post</div>
+                            </div>
+                          </Dropdown.Item>
+                          <Dropdown.Item
+                            className={`${styles.dropdownItem} ${
+                              darkMode ? darkModeCss.grey_2 : ''
+                            }`}
+                            onClick={() => {
+                              setSelectedBlockUserItem(post?.createdBy);
+                              setShowBlockUserPopUp(true);
+                            }}
+                          >
+                            <div className={styles.overlayItem}>
+                              <div
+                                className={`${styles.dropdownImage} ${
+                                  darkMode ? darkModeCss.invertFilter : ''
+                                }`}
+                              >
+                                <NextImage field={BlockUserImage} editable={true} />
+                              </div>
+                              <div className={styles.reportContainerBtn}>
+                                Block {post?.createdBy?.firstName + ' ' + post?.createdBy?.lastName}
+                              </div>
+                            </div>
+                          </Dropdown.Item>
+                          <Dropdown.Item
+                            className={`${styles.dropdownItem} ${
+                              darkMode ? darkModeCss.grey_2 : ''
+                            }`}
+                            onClick={() => {
+                              setSelectedBlockUserItem(post?.createdBy);
+                              setShowReportUserPopUp(true);
+                            }}
+                          >
+                            <div className={styles.overlayItem}>
+                              <div
+                                className={`${styles.dropdownImage} ${
+                                  darkMode ? darkModeCss.invertFilter : ''
+                                }`}
+                              >
+                                <NextImage field={reportPostImage} editable={true} />
+                              </div>
+                              <div className={styles.reportContainerBtn}>
+                                Report{' '}
+                                {post?.createdBy?.firstName + ' ' + post?.createdBy?.lastName}
+                              </div>
+                            </div>
+                          </Dropdown.Item>
+                        </>
+                      ) : (
+                        ''
+                      )}
+                      {post?.createdBy?.objectId === objectId ? (
+                        <Dropdown.Item
+                          className={`${styles.dropdownItem} ${darkMode ? darkModeCss.grey_2 : ''}`}
+                          onClick={() => {
+                            setDeletePostId(post?.id);
+                            setShowDeletePostPopup(true);
                           }}
                         >
-                          <img
-                            width="50px"
-                            src="https://cdn-icons-png.flaticon.com/512/2991/2991112.png"
-                            alt={num}
-                            style={{ margin: '10px' }}
-                          ></img>
-                          {doc.name}
-                        </button>
-                      </span>
-                    </>
-                  );
-                })}
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap' }} id="setVideoPreview">
-                <hr />
-                {post.videoArray?.map((video: any, num: any) => {
-                  return (
-                    <div key={num}>
-                      <video width="100%" controls src={video.value} />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <hr />
-            <div className="postActions" style={{ marginBottom: '10px' }}>
-              <button onClick={() => LikePost(post.id)}>
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/126/126473.png"
-                  //https://cdn-icons-png.flaticon.com/512/739/739231.png
-                  width="40px"
-                  alt="actions"
-                />
-                <span>{post.likes}</span>
-              </button>
-              <button>
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/126/126504.png"
-                  //https://cdn-icons-png.flaticon.com/512/880/880613.png
-                  width="40px"
-                  alt="actions"
-                />
-              </button>
-              <button
-                onClick={() => setOpenComments(post.id, !post.showComments)}
-                aria-controls="commentsContainer"
-                aria-expanded={post.showComments}
-              >
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/1380/1380338.png"
-                  //https://cdn-icons-png.flaticon.com/512/786/786352.png
-                  width="40px"
-                  alt="actions"
-                />
-              </button>
-              <button>
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/2956/2956786.png"
-                  width="40px"
-                  alt="actions"
-                />
-              </button>
-            </div>
-            <Collapse in={post.showComments}>
-              <div id="commentsContainer">
-                <Form
-                  onSubmit={(e) => {
-                    postComments(post?.id, e);
-                  }}
-                  style={{ border: '1px', borderColor: 'black' }}
-                >
-                  <Form.Group className="mb-3" controlId="comments" style={{ display: 'flex' }}>
-                    <img
-                      src="https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
-                      alt="User-Pic"
-                      width="60px"
-                      style={{ marginRight: '10px' }}
-                    ></img>
-                    <Form.Control
-                      // onChange={(e) => setPostComment(e.target.value)}
-                      type="text"
-                      placeholder="Add Comments..."
-                      required
-                      autoFocus
-                      style={{ width: '70%' }}
-                    />
-                    <button
-                      type="button"
-                      // onClick={() => {
-                      //   postComments(post?.id, postComment);
-                      // }}
-                      style={{
-                        float: 'right',
-                        marginLeft: '10px',
-                        borderRadius: '10px',
-                        padding: '5px',
-                        border: 'none',
-                        backgroundColor: '#008CBA',
-                        color: 'white',
-                        width: '30%',
-                      }}
-                    >
-                      PostComment
-                    </button>
-                  </Form.Group>
-                </Form>
-                {post.comments.map((comment: any) => {
-                  return (
-                    <div
-                      style={{
-                        padding: '10px',
-                        backgroundColor: '#9370db',
-                        color: 'white',
-                        borderRadius: '10px',
-                        marginBottom: '10px',
-                      }}
-                    >
-                      <div>
-                        <span>ID : {comment.id}</span>
-                      </div>
-                      <div>
-                        <span>Comment To ID : {comment.commentToId}</span>
-                      </div>
-                      <div>
-                        <span>Name : {comment.nameOfCommentor}</span>
-                      </div>
-                      <div>
-                        <span>Date : {comment.dateAndTime}</span>
-                      </div>
-                      <div>
-                        <span>Comment : {comment.commentString}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                  <button
-                    style={{
-                      padding: '10px',
-                      backgroundColor: '#dcdcdc',
-                      border: 'none',
-                      borderRadius: '20px',
-                    }}
-                    type="button"
-                  >
-                    <span>Load Comments </span>
-                    <img
-                      src="https://cdn-icons-png.flaticon.com/512/2767/2767294.png"
-                      width="20px"
-                      height="20px"
-                    />
-                  </button>
+                          <div className={styles.overlayItem}>
+                            <div className={styles.dropdownImage}>
+                              <NextImage field={Deleteimage} editable={true} />
+                            </div>
+                            <div className={styles.reportContainerBtn}>Delete Post</div>
+                          </div>
+                        </Dropdown.Item>
+                      ) : (
+                        ''
+                      )}
+                    </Dropdown.Menu>
+                  </Dropdown>
                 </div>
               </div>
-            </Collapse>
-          </div>
-        </>
-      );
-    });
-    myAnotherArr?.map((post: any, num: any) => {
-      locArr2.push(
-        <div className="postContainer" key={num}>
-          <div className="postHeading">
-            <div className="postHeaderLeft">
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/1144/1144811.png"
-                alt="User-Pic"
-                width="60px"
-              ></img>
-              <div className="postDetailContainer">
-                <h5
-                  className="postOwner mt-2"
-                  style={{ fontWeight: '750', color: 'grey', fontSize: '24px' }}
-                >
-                  <span>{post?.createdBy?.firstName ? post?.createdBy?.firstName : 'Unknown'}</span>
-                  &nbsp;
-                  <span>{post?.createdBy?.lastName ? post?.createdBy?.lastName : 'User'}</span>
-                </h5>
-                <h6
-                  className="postDate"
-                  style={{ fontWeight: '700', color: 'grey', fontSize: '18px' }}
-                >
-                  <span style={{ fontWeight: '100' }}>
-                    {post?.createdOn != 0 &&
-                    post?.createdOn &&
-                    post?.createdOn != undefined &&
-                    post?.createdOn != null
-                      ? calculateTimeDifference(post?.createdOn)
-                      : 'Recently'}
-                  </span>
-                </h6>
+              <div className="postContent">
+                <div className="postMedia">
+                  {post?.mediaList?.map((media: any, num: any) => {
+                    if (media?.mediaType === 'VIDEO') {
+                      return (
+                        <div key={num}>
+                          <video width="100%" src={media?.url} controls></video>
+                        </div>
+                      );
+                    } else if (media?.mediaType === 'DOCUMENT') {
+                      return (
+                        <div className="docPreviewContainer" key={num}>
+                          <span className="openPrevButton">
+                            <button
+                              onClick={() => openDoc(media?.url)}
+                              style={{
+                                padding: '5px',
+                                borderRadius: '20px',
+                                borderColor: 'white',
+                              }}
+                            >
+                              <img
+                                width="50px"
+                                src="https://cdn-icons-png.flaticon.com/512/2991/2991112.png"
+                                alt={num}
+                                style={{ margin: '10px' }}
+                              ></img>
+                              {'DocFile'}
+                            </button>
+                          </span>
+                        </div>
+                      );
+                    } else if (media?.mediaType === 'IMAGE') {
+                      return (
+                        <div key={num}>
+                          <img
+                            width="100%"
+                            src={media?.url}
+                            alt={media?.id}
+                            style={{ margin: '0 0 15px 0', objectFit: 'contain' }}
+                          ></img>
+                        </div>
+                      );
+                    }
+                    return '';
+                  })}
+                </div>
+                {post?.postType === 'EVENT' ? (
+                  <>
+                    <div className={`postDescription ${darkMode ? 'darkModeDescription' : ''}`}>
+                      {parser(modifyHtml(post?.description))}
+                    </div>
+                    <EventCard
+                      heading={post?.event?.title}
+                      description={post?.event?.description}
+                      date={post?.event?.eventDate}
+                      eventType={post?.event?.eventType}
+                      url={EventImage[post?.event?.eventType]}
+                    />
+                  </>
+                ) : post?.postType === 'POLL' ? (
+                  <>
+                    <div className={`postDescription ${darkMode ? 'darkModeDescription' : ''}`}>
+                      {parser(modifyHtml(post?.description))}
+                    </div>
+                    <PollCard pollPost={{ poll: post?.poll }} voteInAPoll={voteInAPoll} />
+                  </>
+                ) : post?.postType === 'BLOG_POST' ? (
+                  <>
+                    <div className={`blogHeading ${darkMode ? darkModeCss.text_green : ''}`}>
+                      {post?.blog?.heading}
+                    </div>
+                    {post?.blog?.imageUrl && (
+                      <img style={{ width: '100%' }} src={post?.blog?.imageUrl} alt="Post Image" />
+                    )}
+                    <ViewPostDescription description={post?.blog?.description} />
+                  </>
+                ) : (
+                  <ViewPostDescription description={post.description} />
+                )}
               </div>
-            </div>
-            <div className="postHeaderRight">
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/463/463292.png"
-                alt="pan"
-                width="50px"
-              />
-              <img
-                style={{ marginLeft: '30px' }}
-                src="https://cdn-icons-png.flaticon.com/512/10091/10091183.png"
-                alt="pan"
-                width="50px"
-              />
-            </div>
-          </div>
-          <div className="postContent">{post?.description}</div>
-          <hr />
-          <div className="postFooter" style={{ marginBottom: '20px' }}>
-            <div className="postActions" style={{ marginBottom: '10px' }}>
-              <button onClick={() => LikePost(post?.id)}>
-                <img
-                  src={
-                    post?.isLikedByUser
-                      ? 'https://cdn-icons-png.flaticon.com/512/739/739231.png'
-                      : 'https://cdn-icons-png.flaticon.com/512/126/126473.png'
-                  }
-                  //https://cdn-icons-png.flaticon.com/512/739/739231.png
-                  width="40px"
-                  alt="actions"
-                />
-              </button>
-              {/* <button>
-              <img
-                src="https://cdn-icons-png.flaticon.com/512/126/126504.png"
-                //https://cdn-icons-png.flaticon.com/512/880/880613.png
-                width="40px"
-                alt="actions"
-              />
-            </button> */}
+
+              <div className={styles.postFooterContainer}>
+                <div className={styles.likeContainer}>
+                  <button
+                    className={styles.likeButton}
+                    style={darkMode ? { backgroundColor: 'transparent' } : {}}
+                    onClick={() => LikePost(post?.id)}
+                    disabled={post?.isRespPending}
+                  >
+                    <NextImage
+                      field={post?.isLikedByUser ? like : greylikeimage}
+                      editable={true}
+                      alt="PostItems"
+                      width={18}
+                      height={18}
+                    />
+                    <span
+                      className={styles.likePost}
+                      style={post?.isLikedByUser ? { color: '#2e86f9' } : {}}
+                    >
+                      {post?.isLikedByUser ? 'Liked Post' : 'Like Post'}
+                    </span>
+                  </button>
+
+                  <div className={styles.likeCount}>
+                    {post?.postMeasures?.likeCount ? post?.postMeasures?.likeCount : '0'}
+                  </div>
+                </div>
+                <div className={styles.commentContainer}>
+                  <button
+                    className={styles.commentButton}
+                    style={darkMode ? { backgroundColor: 'transparent' } : {}}
+                    onClick={() => setOpenComments(post.id, !post.isOpenComment)}
+                    aria-controls="anotherCommentsContainer"
+                    aria-expanded={post?.isOpenComment}
+                    disabled={post?.isRespPending}
+                  >
+                    <NextImage
+                      field={comment}
+                      editable={true}
+                      alt="PostItems"
+                      width={18}
+                      height={18}
+                    />
+                    <span className={styles.commentPost}>Comment</span>
+                  </button>
+                  <div className={styles.commentCount}>
+                    {post?.postMeasures?.commentCount ? post?.postMeasures?.commentCount : '0'}
+                  </div>
+                </div>
+
+                {/* <div className={styles.shareContainer}>
               <button
-                onClick={() => setOpenComments(post.id, !post.isOpenComment)}
+                className={styles.shareButton}
+                onClick={() => {}}
                 aria-controls="anotherCommentsContainer"
                 aria-expanded={post?.isOpenComment}
+                disabled={post?.isRespPending}
               >
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/1380/1380338.png"
-                  //https://cdn-icons-png.flaticon.com/512/786/786352.png
-                  width="40px"
-                  alt="actions"
-                />
+                <NextImage field={share} editable={true} alt="PostItems" width={18} height={18} />
               </button>
-              <div>
-              <button onClick={()=> handleShowShare(post.id, !post?.showShare)}>
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/2956/2956786.png"
-                  width="40px"
-                  alt="actions"
-                />
-              </button>
-              {post?.showShare && (
-                <div className={ShowShareCss.sharePopups} style={{position : "initial"}}>
-                  <div className={ShowShareCss.sharePopup}>
-                    <NextImage
-                      className={ShowShareCss.whatsappImage}
-                      field={whatsapp}
-                      editable={true}
-                      width={25}
-                      height={25}
-                    />
-                    <Link href={"https://wa.me/?text=Check%20out%20this%20article%20I%20found%3A%20"+post.id}>
-                      WhatsApp
-                    </Link>
-                  </div>
+              <div className={styles.sharePost}>Share</div>
+            </div> */}
 
-                  <div className={ShowShareCss.sharePopup}>
-                    <NextImage
-                      className={ShowShareCss.whatsappImage}
-                      field={twitter}
-                      editable={true}
-                      width={25}
-                      height={25}
-                    />
-                    <Link href={"https://twitter.com/intent/tweet?url="+post.id}>
-                      Twitter
-                    </Link>
-                  </div>
-
-                  <div className={ShowShareCss.sharePopup}>
-                    <NextImage
-                      className={ShowShareCss.whatsappImage}
-                      field={linkedin}
-                      editable={true}
-                      width={25}
-                      height={25}
-                    />
-                    <Link href={"https://www.linkedin.com/sharing/share-offsite/?url="+post.id}>
-                    LinkedIn
-                    </Link>
-                  </div>
-                </div>
-              )}
-              </div>
-            </div>
-            <div>
-              <span style={{ fontWeight: '600' }}>
-                {post?.postMeasures?.likeCount ? post?.postMeasures?.likeCount : '0'}
-                {' Likes'}
-              </span>
-              <span> | </span>
-              <span style={{ fontWeight: '600' }}>
-                {post?.postMeasures?.commentCount ? post?.postMeasures?.commentCount : '0'}
-                {' Comments'}
-              </span>
-            </div>
-          </div>
-          <Collapse in={post?.isOpenComment}>
-            <div id="anotherCommentsContainer">
-              <Form
-                onSubmit={(e) => {
-                  postComments(post?.id, e);
-                }}
-                style={{ border: '1px', borderColor: 'black' }}
-              >
-                <Form.Group className="mb-3" controlId="comments" style={{ display: 'flex' }}>
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/1144/1144811.png"
-                    alt="User-Pic"
-                    width="60px"
-                    style={{ marginRight: '10px' }}
-                  ></img>
-                  <Form.Control
-                    // onChange={(e) => setPostCommentValue(e.target.value)}
-                    type="text"
-                    placeholder="Add Comments..."
-                    required
-                    autoFocus
-                    style={{ width: '100%' }}
-                  />
-                  <button
-                    type="submit"
-                    style={{
-                      float: 'right',
-                      marginLeft: '10px',
-                      borderRadius: '10px',
-                      padding: '5px',
-                      border: 'none',
-                      backgroundColor: '#008CBA',
-                      color: 'white',
-                      width: '20%',
-                    }}
-                  >
-                    PostComment
-                  </button>
-                </Form.Group>
-              </Form>
-              {post?.comments?.map((comment: any) => {
-                return (
-                  <>
-                    <div
-                      style={{
-                        padding: '20px',
-                        backgroundColor: 'lightgray',
-                        margin: '5px',
-                        borderBottomLeftRadius: '30px',
-                        borderTopRightRadius: '30px',
-                        borderBottomRightRadius: '30px',
-                        marginTop: '20px',
-                      }}
+                <div className={styles.shareContainer}>
+                  <Dropdown style={{ alignItems: 'center', display: 'flex' }}>
+                    <Dropdown.Toggle
+                      variant="secondary"
+                      id="dropdown-basic"
+                      className={ShowShareCss.dropdownBtn}
                     >
-                      <div>
-                        <h4>
-                          {userObject?.firstName} {userObject?.lastName}
-                        </h4>
-                      </div>
-                      <div>{comment?.commentString}</div>
+                      <button
+                        onClick={() => handleShowShare(post.id, !post?.showShare)}
+                        className={styles.shareButton}
+                        style={darkMode ? { backgroundColor: 'transparent' } : {}}
+                        disabled={post?.isRespPending}
+                      >
+                        <img src={share.src} alt="SharePost" />
+                        <div className={styles.sharePost}>Share</div>
+                      </button>
+                    </Dropdown.Toggle>
+
+                    <Dropdown.Menu
+                      className={`${ShowShareCss.dropdownMenu} ${
+                        darkMode ? darkModeCss.grey_1 : ''
+                      }`}
+                    >
+                      <Dropdown.Item
+                        className={`${ShowShareCss.dropdownItem} ${
+                          darkMode ? ShowShareCss.darkModeActive : ''
+                        }`}
+                        target="_blank"
+                        href={`${props?.fields?.data?.datasource?.whatsApp?.jsonValue?.value}${process.env.PUBLIC_URL}/post/${post.id}&utm_source=whatsapp&utm_medium=social&utm_term=${post.id}`}
+                      >
+                        <div className={ShowShareCss.overlayItem}>
+                          <div className={ShowShareCss.dropdownImage}>
+                            <NextImage
+                              className={ShowShareCss.whatsappImage}
+                              field={whatsapp}
+                              editable={true}
+                              width={25}
+                              height={25}
+                            />
+                          </div>
+                          <span className={ShowShareCss.targetIcon}>Share on WhatsApp</span>
+                        </div>
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        className={`${ShowShareCss.dropdownItem} ${
+                          darkMode ? ShowShareCss.darkModeActive : ''
+                        }`}
+                        target="_blank"
+                        href={`${props?.fields?.data?.datasource?.twitter?.jsonValue?.value}?url=${process.env.PUBLIC_URL}/post/${post.id}&utm_source=twitter&utm_medium=social&utm_term=${post.id}`}
+                      >
+                        <div className={ShowShareCss.overlayItem}>
+                          <div className={ShowShareCss.dropdownImage}>
+                            <NextImage
+                              className={ShowShareCss.whatsappImage}
+                              field={twitter}
+                              editable={true}
+                              width={25}
+                              height={25}
+                            />
+                          </div>
+                          <span className={ShowShareCss.targetIcon}>Share on Twitter</span>
+                        </div>
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        className={`${ShowShareCss.dropdownItem} ${
+                          darkMode ? ShowShareCss.darkModeActive : ''
+                        }`}
+                        target="_blank"
+                        href={`${props?.fields?.data?.datasource?.linkedIn?.jsonValue?.value}?url=${process.env.PUBLIC_URL}/post/${post.id}&utm_source=linkdeIn&utm_medium=social&utm_term=${post.id}`}
+                      >
+                        <div className={ShowShareCss.overlayItem}>
+                          <div className={ShowShareCss.dropdownImage}>
+                            <NextImage
+                              className={ShowShareCss.whatsappImage}
+                              field={linkedin}
+                              editable={true}
+                              width={25}
+                              height={25}
+                            />
+                          </div>
+                          <span className={ShowShareCss.targetIcon}>Share on LinkedIn</span>
+                        </div>
+                      </Dropdown.Item>
+                      <Dropdown.Item
+                        className={`${ShowShareCss.dropdownItem} ${
+                          darkMode ? ShowShareCss.darkModeActive : ''
+                        }`}
+                        target="_blank"
+                        href={`${props?.fields?.data?.datasource?.facebook?.jsonValue?.value}?u=${process.env.PUBLIC_URL}/post/${post.id}&utm_source=facebook&utm_medium=social&utm_term=${post.id}`}
+                      >
+                        <div className={ShowShareCss.overlayItem}>
+                          <div className={ShowShareCss.dropdownImage}>
+                            <NextImage
+                              className={ShowShareCss.whatsappImage}
+                              field={facebook}
+                              editable={true}
+                              width={25}
+                              height={25}
+                            />
+                          </div>
+                          <span className={ShowShareCss.targetIcon}>Share on Facebook</span>
+                        </div>
+                      </Dropdown.Item>
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </div>
+              </div>
+
+              <Collapse in={post?.isOpenComment}>
+                <div id="anotherCommentsContainer" className="loadCommentContainer">
+                  <Form
+                    onSubmit={(e) => {
+                      postComments(post?.id, e);
+                    }}
+                    style={{ border: '1px', borderColor: 'black' }}
+                  >
+                    <Form.Group
+                      className="mb-2"
+                      controlId="comments"
+                      style={{ display: 'flex', padding: '5px 15px 0' }}
+                    >
+                      <Link passHref={true} href={`${viewProfileLinkUrl}${objectId}`}>
+                        <img
+                          className="commentUserImage"
+                          src={
+                            userObject?.profilePictureUrl ? userObject?.profilePictureUrl : user.src
+                          }
+                          alt="User-Pic"
+                          style={{ marginLeft: '0' }}
+                        ></img>
+                      </Link>
+                      <Form.Control
+                        // onChange={(e) => setPostCommentValue(e.target.value)}
+                        type="text"
+                        placeholder="Write a Comment..."
+                        required
+                        autoFocus
+                        style={{ width: '100%', fontSize: '13px', color: '#a5a9ae' }}
+                      />
+                      <button type="submit" className="postCommentButton">
+                        Post
+                      </button>
+                    </Form.Group>
+                  </Form>
+                  {post?.comments?.map((comment: any) => {
+                    return (
+                      <>
+                        <div className="commentSection">
+                          <figure>
+                            <Link
+                              passHref={true}
+                              href={`${viewProfileLinkUrl}${comment?.createdBy?.objectId}`}
+                            >
+                              <img
+                                className="commentUserImage"
+                                src={
+                                  comment?.createdBy?.profilePictureUrl
+                                    ? comment?.createdBy?.profilePictureUrl
+                                    : user.src
+                                }
+                                alt="User-Pic"
+                                style={{
+                                  marginLeft: '0',
+                                }}
+                              ></img>
+                            </Link>
+                          </figure>
+                          <div
+                            className="commentContainer"
+                            id={comment?.id}
+                            style={{
+                              padding: '10px',
+                              backgroundColor: '#F0F0F0',
+                              borderRadius: '10px',
+                            }}
+                          >
+                            <h5 className="commentHeadingTop">
+                              {comment?.createdBy?.firstName} {comment?.createdBy?.lastName}
+                            </h5>
+                            {comment?.isEditOn ? (
+                              <>
+                                <Form
+                                  style={{ display: 'flex', marginTop: '8px' }}
+                                  onSubmit={(e) => editComment(e, post?.id, comment?.id)}
+                                >
+                                  <Form.Group style={{ width: '100%' }} controlId="formBasicEmail">
+                                    <Form.Control type="text" defaultValue={comment?.text} />
+                                  </Form.Group>
+                                  <Button
+                                    style={{
+                                      marginLeft: '10px',
+                                      backgroundColor: '#47D7AC',
+                                      color: 'white',
+                                      borderRadius: '5px',
+                                      border: 'none',
+                                    }}
+                                    variant="primary"
+                                    type="submit"
+                                  >
+                                    Save
+                                  </Button>
+                                </Form>
+                                {/* <span>
+                              <p className="commentHeading" contentEditable={comment?.isEditOn}>
+                                {comment?.text}
+                              </p>{' '}
+                              <button
+                                style={{
+                                  border: 'none',
+                                  backgroundColor: '#47D7AC',
+                                  color: 'white',
+                                  borderRadius: '5px',
+                                  marginTop: '5px',
+                                }}
+                              >
+                                save
+                              </button>
+                            </span> */}
+                              </>
+                            ) : (
+                              <p className="commentHeading">{comment?.text}</p>
+                            )}
+                            <div
+                              onClick={() => getAllupVotesAndDownVotes(comment?.id)}
+                              className="upvoteDownvoteContainer"
+                            >
+                              <div className="likecomments">
+                                <img
+                                  className="likecomments"
+                                  src="https://cdn-icons-png.flaticon.com/512/739/739231.png"
+                                  alt="Like"
+                                />
+                              </div>
+                              <div className="likecomments">
+                                <img className="likecomments" src={downVote.src} alt="Dislike" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div style={{ marginLeft: '55px' }}>
+                            {/* <span onClick={() => handleUpvote(comment?.id)}>
+                           <img
+                              className="likecomments"
+                              src={
+                                 post?.isLikedByUser
+                                 ? 'https://cdn-icons-png.flaticon.com/512/739/739231.png'
+                                 : 'https://cdn-icons-png.flaticon.com/512/126/126473.png'
+                              }
+                              //https://cdn-icons-png.flaticon.com/512/739/739231.png
+                              alt="actions"
+                           />
+                        </span>
+                        <span onClick={() => handleDownvote(comment?.id)}>
+                           <img
+                              width="30px"
+                              style={{ margin: '5px' }}
+                              className="likecomments"
+                              src="https://img.icons8.com/ios/256/thumbs-down.png"
+                              alt="downVote"
+                           />
+                        </span> */}
+                            <button
+                              onClick={() =>
+                                openCommentReplies(post?.id, comment?.id, !comment?.isOpenReply)
+                              }
+                              aria-controls="repliesContainer"
+                              aria-expanded={comment?.isOpenReply}
+                              className="commentReply"
+                              disabled={comment?.isRespPending}
+                              style={comment?.isRespPending ? { opacity: 0.5 } : {}}
+                            >
+                              Reply
+                            </button>
+                            <span className="commentPostDate" style={{ fontSize: '12px' }}>
+                              {' '}
+                              {calculateTimeDifference(comment?.createdOn)}
+                            </span>
+                            {comment?.createdBy.objectId === objectId && objectId ? (
+                              <button
+                                disabled={comment?.isRespPending}
+                                style={comment?.isRespPending ? { opacity: 0.5 } : {}}
+                                onClick={() => {
+                                  setDeleteCommentId({ postId: post?.id, commentId: comment?.id });
+                                  setShowDeleteCommentPopup(true);
+                                }}
+                                className="commentReply"
+                              >
+                                Delete
+                              </button>
+                            ) : (
+                              ''
+                            )}
+                            {comment?.createdBy.objectId === objectId && objectId ? (
+                              <button
+                                disabled={comment?.isRespPending}
+                                style={comment?.isRespPending ? { opacity: 0.5 } : {}}
+                                onClick={() => {
+                                  commentEditOn(post?.id, comment?.id, !comment?.isEditOn);
+                                }}
+                                className="commentReply"
+                              >
+                                Edit
+                              </button>
+                            ) : (
+                              ''
+                            )}
+                          </div>
+                          <Collapse in={comment?.isOpenReply}>
+                            <div style={{ position: 'relative', left: '10%', width: '88%' }}>
+                              <Form
+                                onSubmit={(e) => {
+                                  postCommentReply(post?.id, comment?.id, e);
+                                }}
+                                style={{ border: '1px', borderColor: 'black' }}
+                              >
+                                <Form.Group
+                                  controlId="comments"
+                                  style={{ display: 'flex', padding: '5px 0 15px 15px' }}
+                                >
+                                  <Link passHref={true} href={`${viewProfileLinkUrl}${objectId}`}>
+                                    <img
+                                      width="32px"
+                                      className="commentUserImage"
+                                      src={
+                                        userObject?.profilePictureUrl
+                                          ? userObject?.profilePictureUrl
+                                          : user.src
+                                      }
+                                      alt="User-Pic"
+                                      style={{ marginLeft: '0' }}
+                                    ></img>
+                                  </Link>
+                                  <Form.Control
+                                    // onChange={(e) => setPostCommentValue(e.target.value)}
+                                    type="text"
+                                    placeholder="Write a Reply..."
+                                    required
+                                    autoFocus
+                                    style={{ width: '100%', color: '#a5a9ae', fontSize: '13px' }}
+                                  />
+                                  <button type="submit" className="postCommentButton">
+                                    Reply
+                                  </button>
+                                </Form.Group>
+                              </Form>
+                              {comment?.replies?.map((reply: any) => {
+                                return (
+                                  <>
+                                    <div className="commentSection">
+                                      <figure>
+                                        <Link
+                                          passHref={true}
+                                          href={`${viewProfileLinkUrl}${reply?.createdBy?.objectId}`}
+                                        >
+                                          <img
+                                            className="commentUserImage"
+                                            src={
+                                              reply?.createdBy?.profilePictureUrl
+                                                ? reply?.createdBy?.profilePictureUrl
+                                                : user.src
+                                            }
+                                            alt="User-Pic"
+                                            style={{
+                                              marginLeft: '0',
+                                            }}
+                                          ></img>
+                                        </Link>
+                                      </figure>
+                                      <div
+                                        id={reply?.id}
+                                        style={{
+                                          padding: '10px',
+                                          backgroundColor: '#F0F0F0',
+                                          borderRadius: '10px',
+                                        }}
+                                        className="commentContainer"
+                                      >
+                                        <h5 className="commentHeadingTop">
+                                          {reply?.createdBy?.firstName} {reply?.createdBy?.lastName}{' '}
+                                        </h5>
+                                        {reply?.isEditOn ? (
+                                          <Form
+                                            style={{ display: 'flex', marginTop: '8px' }}
+                                            onSubmit={(e) =>
+                                              editReply(e, post?.id, comment?.id, reply?.id)
+                                            }
+                                          >
+                                            <Form.Group
+                                              style={{ width: '100%' }}
+                                              controlId="formBasicEmail"
+                                            >
+                                              <Form.Control
+                                                type="text"
+                                                defaultValue={reply?.text}
+                                              />
+                                            </Form.Group>
+                                            <Button
+                                              style={{
+                                                marginLeft: '10px',
+                                                backgroundColor: '#47D7AC',
+                                                color: 'white',
+                                                borderRadius: '5px',
+                                                border: 'none',
+                                              }}
+                                              variant="primary"
+                                              type="submit"
+                                            >
+                                              Save
+                                            </Button>
+                                          </Form>
+                                        ) : (
+                                          <p className="commentHeading">{reply?.text}</p>
+                                        )}
+                                        <div
+                                          onClick={() => getAllupVotesAndDownVotes(reply?.id)}
+                                          className="upvoteDownvoteContainer"
+                                        >
+                                          <div className="likecomments">
+                                            <img
+                                              className="likecomments"
+                                              src="https://cdn-icons-png.flaticon.com/512/739/739231.png"
+                                              alt="Like"
+                                            />
+                                          </div>
+                                          <div className="likecomments">
+                                            <img
+                                              className="likecomments"
+                                              src={downVote.src}
+                                              alt="Dislike"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div
+                                      style={{
+                                        marginLeft: '55px',
+                                      }}
+                                    >
+                                      {/* <span onClick={() => handleUpvote(reply?.id)}>
+                                    <img
+                                    style={{ margin: '5px' }}
+                                    width="30px"
+                                    className="likecomments"
+                                    src="https://cdn-icons-png.flaticon.com/512/126/126473.png"
+                                    alt="upvote"
+                                    />
+                                 </span>
+                                 <span onClick={() => handleDownvote(reply?.id)}>
+                                    <img
+                                    width="30px"
+                                    style={{ margin: '5px' }}
+                                    className="likecomments"
+                                    src="https://img.icons8.com/ios/256/thumbs-down.png"
+                                    alt="downVote"
+                                    />
+                                 </span> */}
+                                      <button
+                                        aria-controls="replyOfReplyContainer"
+                                        aria-expanded={reply?.isOpenReplyOfReply}
+                                        className="commentReply"
+                                        onClick={() =>
+                                          openReplyOfReply(
+                                            post?.id,
+                                            comment?.id,
+                                            reply?.id,
+                                            !reply?.isOpenReplyOfReply
+                                          )
+                                        }
+                                        disabled={reply?.isRespPending}
+                                        style={reply?.isRespPending ? { opacity: 0.5 } : {}}
+                                      >
+                                        Reply
+                                      </button>
+                                      <span
+                                        className="commentPostDate"
+                                        style={{ fontSize: '12px' }}
+                                      >
+                                        {' '}
+                                        {calculateTimeDifference(reply?.createdOn)}
+                                      </span>
+                                      {comment?.createdBy.objectId === objectId && objectId ? (
+                                        <button
+                                          disabled={comment?.isRespPending}
+                                          onClick={() => {
+                                            setDeleteCommentId({
+                                              postId: post?.id,
+                                              commentId: comment?.id,
+                                              replyId: reply?.id,
+                                            });
+                                            setShowDeleteCommentPopup(true);
+                                          }}
+                                          className="commentReply"
+                                          style={reply?.isRespPending ? { opacity: 0.5 } : {}}
+                                        >
+                                          Delete
+                                        </button>
+                                      ) : (
+                                        ''
+                                      )}
+                                      {reply?.createdBy?.objectId === objectId && objectId ? (
+                                        <button
+                                          disabled={reply?.isRespPending}
+                                          style={reply?.isRespPending ? { opacity: 0.5 } : {}}
+                                          onClick={() => {
+                                            replyEditOn(
+                                              post?.id,
+                                              comment?.id,
+                                              reply?.id,
+                                              !reply?.isEditOn
+                                            );
+                                          }}
+                                          className="commentReply"
+                                        >
+                                          Edit
+                                        </button>
+                                      ) : (
+                                        ''
+                                      )}
+                                    </div>
+                                    <Collapse in={reply?.isOpenReplyOfReply}>
+                                      <div
+                                        style={{ position: 'relative', left: '10%', width: '88%' }}
+                                      >
+                                        <Form
+                                          onSubmit={(e) => {
+                                            postCommentReply(post?.id, comment?.id, e);
+                                          }}
+                                          style={{ border: '1px', borderColor: 'black' }}
+                                        >
+                                          <Form.Group
+                                            controlId="comments"
+                                            style={{ display: 'flex' }}
+                                          >
+                                            <Link
+                                              passHref={true}
+                                              href={`${viewProfileLinkUrl}${objectId}`}
+                                            >
+                                              <img
+                                                width="32px"
+                                                className="commentUserImage"
+                                                src={
+                                                  userObject?.profilePictureUrl
+                                                    ? userObject?.profilePictureUrl
+                                                    : user.src
+                                                }
+                                                alt="User-Pic"
+                                                style={{ marginLeft: '0' }}
+                                              ></img>
+                                            </Link>
+                                            <Form.Control
+                                              // onChange={(e) => setPostCommentValue(e.target.value)}
+                                              type="text"
+                                              placeholder="Write a Reply..."
+                                              required
+                                              autoFocus
+                                              style={{
+                                                width: '100%',
+                                                color: '#a5a9ae',
+                                                fontSize: '13px',
+                                              }}
+                                            />
+                                            <button type="submit" className="postCommentButton">
+                                              Reply
+                                            </button>
+                                          </Form.Group>
+                                        </Form>
+                                      </div>
+                                    </Collapse>
+                                  </>
+                                );
+                              })}
+                              {comment?.hasReply ? (
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    marginBottom: '16px',
+                                    marginTop: '16px',
+                                  }}
+                                >
+                                  {comment.isLoadingReplies ? (
+                                    <Spinner animation="border" />
+                                  ) : (
+                                    <button
+                                      onClick={() => loadCommentReplies(post?.id, comment?.id)}
+                                      className="postCommentButton"
+                                      style={{
+                                        marginLeft: '0',
+                                      }}
+                                    >
+                                      <span>Load Replies...</span>
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                ''
+                              )}
+                            </div>
+                          </Collapse>
+                        </div>
+                      </>
+                    );
+                  })}
+                  {post?.postMeasures?.commentCount > 0 ? (
+                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                      {post.isLoadingComments ? (
+                        <Spinner animation="border" />
+                      ) : (
+                        <button
+                          onClick={() => loadComments(post.id)}
+                          className="postCommentButton"
+                          style={{
+                            marginBottom: '16px',
+                            marginLeft: '0',
+                          }}
+                        >
+                          <span>Load Comments...</span>
+                        </button>
+                      )}
                     </div>
-                  </>
-                );
-              })}
-              {/* <div style={{ display: 'flex', justifyContent: 'center' }}>
-                <button
-                  style={{
-                    padding: '10px',
-                    backgroundColor: '#dcdcdc',
-                    border: 'none',
-                    borderRadius: '20px',
-                  }}
-                  type="button"
-                >
-                  <span>Load Comments </span>
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/2767/2767294.png"
-                    width="20px"
-                    height="20px"
-                  />
-                </button>
-              </div> */}
+                  ) : (
+                    ''
+                  )}
+                </div>
+              </Collapse>
             </div>
-          </Collapse>
-        </div>
+          )}
+        </>
       );
     });
     setPosts(locArr2);
   }
 
-  function addLatestCreatedPost(id: string) {
+  function openReplyOfReply(postId: string, commentId: string, replyId: string, open: boolean) {
+    const locArr = myAnotherArr;
+    locArr.map((post: any) => {
+      if (post?.id == postId && post.comments?.length > 0) {
+        post.comments.map((comment: any) => {
+          if (comment?.id == commentId) {
+            comment?.replies?.map((reply: any) => {
+              if (reply?.id == replyId) {
+                reply.isOpenReplyOfReply = open;
+                return reply;
+              } else {
+                return reply;
+              }
+            });
+            return comment;
+          } else {
+            return comment;
+          }
+        });
+      }
+    });
+    updateArrayWithLatestdata(locArr);
+  }
+
+  function openCommentReplies(postId: string, commentid: any, open: boolean) {
+    const locArr = myAnotherArr;
+    locArr.map((post: any) => {
+      if (post.id === postId && post.comments?.length > 0) {
+        post.comments.map((comment: any) => {
+          if (comment?.id == commentid) {
+            comment.isOpenReply = open;
+            return comment;
+          } else {
+            return comment;
+          }
+        });
+      }
+    });
+    updateArrayWithLatestdata(locArr);
+    // loadCommentReplies(postId, commentid);
+  }
+
+  async function postCommentReply(postId: string, commentId: string, e: any) {
+    e.preventDefault();
+    const commentString = e.target[0].value;
+    e.currentTarget.reset();
+
+    const uniqId = generateUniqueId();
+    const timestamp = new Date().getTime();
+    const replyObj = {
+      id: uniqId,
+      createdBy: { ...userObject },
+      text: commentString,
+      hasReply: true,
+      isOpenReplyOfReply: false,
+      createdOn: timestamp,
+      isRespPending: true,
+      isEditOn: false,
+    };
+    setMyAnotherArr((prevState: any) => {
+      const updatedPosts = prevState.map((post: any) => {
+        if (post.id === postId) {
+          const updatedComments = post.comments.map((comment: any) => {
+            if (comment.id === commentId) {
+              const updatedReplies = [replyObj, ...comment.replies];
+              return {
+                ...comment,
+                replies: updatedReplies,
+              };
+            } else {
+              return comment;
+            }
+          });
+          return { ...post, comments: updatedComments };
+        } else {
+          return post;
+        }
+      });
+      return updatedPosts;
+    });
+    const resp = await postCommentReplyCall(userToken, postId, commentId, commentString);
+    if (!resp?.data?.data) {
+      deleteReplyFromComment(postId, commentId, uniqId);
+    }
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.map((post: any) => {
+        if (post.id === postId) {
+          const updatedComments = post.comments.map((comment: any) => {
+            if (comment.id === commentId) {
+              const updatedReplies = comment.replies.map((reply: any) => {
+                if (reply.id === uniqId) {
+                  return {
+                    ...reply,
+                    id: resp?.data?.data,
+                    isRespPending: false,
+                  };
+                } else {
+                  return reply;
+                }
+              });
+              return {
+                ...comment,
+                replies: updatedReplies,
+              };
+            } else {
+              return comment;
+            }
+          });
+          return { ...post, comments: updatedComments };
+        } else {
+          return post;
+        }
+      });
+    });
+  }
+
+  function updateArrayWithLatestdata(locArr: any) {
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.map((post: any, index: number) => {
+        if (index < locArr.length) {
+          return locArr[index];
+        } else {
+          return post;
+        }
+      });
+    });
+  }
+
+  async function loadCommentReplies(postId: string, id: string) {
+    loadingReplies(postId, id, true);
+    const resp = await getCommentsReplyCall(userToken, id, 0);
+    loadingReplies(postId, id, false);
+    const locArr = myAnotherArr;
+    resp?.data?.data.map((reply: any) => {
+      reply.isOpenReplyOfReply = false;
+      reply.isEditOn = false;
+    });
+    locArr.map((post: any) => {
+      if (post.comments?.length > 0) {
+        post.comments.map((comment: any) => {
+          if (comment?.id == id) {
+            comment.replies = resp?.data?.data;
+            return comment;
+          } else {
+            return comment;
+          }
+        });
+      }
+    });
+    updateArrayWithLatestdata(locArr);
+  }
+
+  function loadingComments(id: any, val: boolean) {
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.map((post: any) => {
+        if (post.id === id) {
+          return {
+            ...post,
+            isLoadingComments: val,
+          };
+        } else {
+          return post;
+        }
+      });
+    });
+  }
+
+  function loadingReplies(postId: string, commentId: string, val: boolean) {
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.map((post: any) => {
+        if (post.id === postId) {
+          const updatedComments = post.comments.map((comment: any) => {
+            if (comment.id === commentId) {
+              return {
+                ...comment,
+                isLoadingReplies: val,
+              };
+            } else {
+              return comment;
+            }
+          });
+          return {
+            ...post,
+            comments: updatedComments,
+          };
+        } else {
+          return post;
+        }
+      });
+    });
+  }
+
+  async function loadComments(id: any) {
+    loadingComments(id, true);
+    const resp = await getCommentsCall(userToken, id, 0);
+    loadingComments(id, false);
+    const respArr = resp?.data?.data;
+    respArr?.map((comment: any) => {
+      comment.isOpenReply = false;
+      comment.replies = [];
+      comment.isLoadingReplies = false;
+    });
+    const locArr = myAnotherArr;
+    locArr.map((post: any) => {
+      if (id === post?.id && respArr) {
+        const comm = [...respArr];
+        post.comments = comm;
+        return post;
+      }
+    });
+    updateArrayWithLatestdata(locArr);
+  }
+
+  function addLatestCreatedPost(id: string, localId: string) {
+    localId;
     getPostByIdCall(userToken, id).then((response) => {
       if (response?.data?.data != undefined) {
-        let locArray: any = [];
-        locArray.push(response?.data?.data);
-        setMyAnotherArr((prevState: any[]) => {
-          return [...locArray, ...prevState];
+        const resp = response?.data?.data;
+        setMyAnotherArr((prevPosts: any) => {
+          return prevPosts.map((post: any) => {
+            if (post?.id === localId) {
+              let updatedPoll = null;
+              if (post?.postType === 'POLL') {
+                const updatedOptions: any[] = [];
+                post.poll.pollOptions.forEach((option: any) => {
+                  const matchingOption = resp.poll.pollOptions.find(
+                    (opt: any) => opt.optionText === option.optionText
+                  );
+                  if (matchingOption) {
+                    updatedOptions.push({ ...option, id: matchingOption.id });
+                  } else {
+                    updatedOptions.push(option);
+                  }
+                });
+                updatedPoll = { ...post.poll, pollOptions: updatedOptions, id: resp?.poll?.id };
+              } else {
+                updatedPoll = post.poll;
+              }
+              return {
+                ...post,
+                id: resp.id,
+                isRespPending: false,
+                poll: updatedPoll,
+              };
+            }
+            return post;
+          });
         });
       }
     });
@@ -865,9 +2439,9 @@ const AddPost = (props: AddPostProps | any): JSX.Element => {
     if (timeDiffHours >= 24) {
       return `${timeDiffDays} ${timeDiffDays > 1 ? 'days' : 'day'} ago`;
     } else if (timeDiffMinutes >= 60) {
-      return `${timeDiffHours} ${timeDiffDays > 1 ? 'hours' : 'hour'} ago`;
+      return `${timeDiffHours} ${timeDiffHours > 1 ? 'hours' : 'hour'} ago`;
     } else {
-      return `${timeDiffMinutes} ${timeDiffDays > 1 ? 'minutes' : 'minute'} ago`;
+      return `${timeDiffMinutes} ${timeDiffMinutes > 1 ? 'minutes' : 'minute'} ago`;
     }
   }
 
@@ -877,140 +2451,154 @@ const AddPost = (props: AddPostProps | any): JSX.Element => {
     if (postText == '') {
       return;
     }
-    let uniqueId = generateUniqueId();
-
-    setMyArr((prevPosts) => {
-      const newPost = {
-        id: uniqueId,
-        // heading: postHeading,
-        postText: postText,
-        imageArray: file,
-        docArray: docs,
-        videoArray: videoLink,
-        likes: 0,
-        disLikes: [],
-        showComments: false,
-        comments: [],
-      };
-      return { posts: [...prevPosts.posts, newPost] };
+    const timestamp = new Date().getTime();
+    const uniqId = generateUniqueId();
+    const obj = {
+      data: {
+        data: {
+          id: uniqId,
+          description: postText,
+          postType: globalPostType,
+          mediaList: [...file, ...docs, ...videoLink],
+          postMeasures: {
+            likeCount: 0,
+            commentCount: 0,
+            repostCount: 0,
+          },
+          createdBy: { ...userObject },
+          event: eventPost?.event,
+          createdOn: timestamp,
+          isLikedByUser: false,
+          comments: [],
+          isRespPending: true,
+          isLoadingComments: false,
+          poll: pollPost?.poll,
+        },
+      },
+    };
+    setShowForm1(false);
+    setMyAnotherArr((prevState: any) => {
+      return [obj?.data?.data, ...prevState];
     });
-
-    addPostCall(userToken, { description: postText }).then((response) => {
+    addPostCall(userToken, {
+      description: postText,
+      mediaList: [...file, ...docs, ...videoLink],
+      taggedPeers: addedPeers,
+      type: globalPostType,
+      event: eventPost?.event,
+      poll: pollPost?.poll,
+    }).then((response) => {
       if (response?.data?.data) {
-        addLatestCreatedPost(response?.data?.data);
+        addLatestCreatedPost(response?.data?.data, uniqId);
         // Empty Post Values
-        setShowForm1(false);
         setFile([]);
         setPostText('');
         setVideoLink([]);
         setDocs([]);
+        setEditorState(() => EditorState.createEmpty());
+        setEventPost('');
+        setPollPost('');
+        setGlobalPostType('TEXT_POST');
+        setShowForm1(false);
       } else {
-        setCreateNewPostError(true);
-        setTimeout(() => {
-          setCreateNewPostError(false);
-        }, 2000);
+        setShowForm1(true);
+        setShowNofitication(true);
+        setToastError(true);
+        setToastMessage('Post Not Created !');
+        deletePostById(uniqId);
       }
     });
   };
 
-  //Function To Handle Post Action Items
-  // useEffect(() => {
-  //   if (props?.fields?.data?.datasource?.postType?.targetItems?.delete?.me) {
-  //     let arr: any[] = [];
-  //     props?.fields?.data?.datasource?.postType?.targetItems?.map((item: any) => {
-  //       arr?.push(
-  //         <div>
-  //           <button>
-  //             <span>{item?.title?.jsonValue?.value}</span>
-  //             <img
-  //               src={`https://9977-182-77-26-98.in.ngrok.io/${item?.image?.jsonValue?.value?.src}`}
-  //               alt={item?.image?.jsonValue?.value?.alt}
-  //               width="30px"
-  //             ></img>
-  //           </button>
-  //         </div>
-  //       );
-  //     });
-  //     setPostItems(arr);
-  //   }
-  // }, [props]);
+  function deletePostById(postId: any) {
+    setMyAnotherArr((prevPosts: any) => {
+      return prevPosts.filter((post: any) => post.id !== postId);
+    });
+  }
 
   function clickmebuttonHandler() {
     if (typeof document !== undefined) {
-      let buttEle = document.getElementById('clickmebutton');
+      const buttEle = document.getElementById('clickmebutton');
       buttEle?.click();
     }
   }
 
   function clickmebuttonHandler2() {
     if (typeof document !== undefined) {
-      let buttEle = document.getElementById('clickmebutton2');
+      const buttEle = document.getElementById('clickmebutton2');
       buttEle?.click();
     }
   }
 
   function clickmebuttonHandler3() {
     if (typeof document !== undefined) {
-      let buttEle = document.getElementById('clickmebutton3');
+      const buttEle = document.getElementById('clickmebutton3');
       buttEle?.click();
     }
   }
 
-  //Function To Handle Load Image Files
-  function uploadMultipleFiles(e: any) {
-    const files = e.target.files;
-    const fileArray: any = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const reader = new FileReader();
-      reader.readAsDataURL(files[i]);
-      let uniqueId = generateUniqueId();
-      let name = files[i].name;
-
-      reader.onload = () => {
-        fileArray.push({ id: uniqueId, name: name, value: reader.result });
-        if (fileArray.length === files.length) {
-          setFile(fileArray);
-        }
-      };
-    }
+  async function UploadFilesToServer(file: any, type: string) {
+    return await uploadFilesCall(userToken, file, type).then((response) => {
+      return response?.data;
+    });
   }
 
+  //Function To Handle Load Image Files
+  async function uploadMultipleFiles(e: any) {
+    const files = e.target.files;
+    const fileArray: any = [];
+    for (let i = 0; i < files.length; i++) {
+      const temp = files[i];
+      const resp = await UploadFilesToServer(temp, 'IMAGE');
+      if (!resp?.data) break;
+      const uniqueId = generateUniqueId();
+      fileArray.push({ id: uniqueId, url: resp?.data, mediaType: 'IMAGE', mediaSequence: 0 });
+    }
+    if (fileArray.length === files.length) {
+      setFile(fileArray);
+    }
+  }
   //Function To Handle Load Doc Files
-  function uploadMultipleDocs(e: any) {
+  async function uploadMultipleDocs(e: any) {
     const files = e.target.files;
     const fileArray: any = [];
 
     for (let i = 0; i < files.length; i++) {
-      const reader = new FileReader();
-      reader.readAsDataURL(files[i]);
-      let uniqueId = generateUniqueId();
-      let name = files[i].name;
-      reader.onload = () => {
-        fileArray.push({ id: uniqueId, name: name, value: reader.result });
-        if (fileArray.length === files.length) {
-          setDocs(fileArray);
-        }
-      };
+      const resp = await UploadFilesToServer(files[i], 'DOC');
+      if (!resp?.data) break;
+      const uniqueId = generateUniqueId();
+      fileArray.push({
+        id: uniqueId,
+        url: resp?.data,
+        // name: files[i].name,
+        mediaType: 'DOCUMENT',
+        mediaSequence: 0,
+      });
+    }
+    if (fileArray.length === files.length) {
+      setDocs(fileArray);
     }
   }
 
   //Function To Handle Load Video Files
-  function uploadVideo(e: any) {
+  async function uploadVideo(e: any) {
     const files = e.target.files;
     const fileArray: any = [];
 
-    for (let i = 0; i < files.length; i++) {
-      const reader = new FileReader();
-      let uniqueId = generateUniqueId();
-      reader.readAsDataURL(files[i]);
-      let name = files[i].name;
-      reader.onload = () => {
-        fileArray.push({ id: uniqueId, name: name, value: reader.result });
-        if (fileArray.length === files.length) {
-          setVideoLink(fileArray);
-        }
-      };
+    for (let i = 0; i < files?.length; i++) {
+      const resp = await UploadFilesToServer(files[i], 'VIDEO');
+      if (!resp?.data) break;
+      const uniqueId = generateUniqueId();
+      fileArray.push({
+        id: uniqueId,
+        url: resp?.data,
+        // name: files[i]?.name,
+        mediaType: 'VIDEO',
+        mediaSequence: 0,
+      });
+    }
+    if (fileArray?.length === files?.length) {
+      setVideoLink(fileArray);
     }
   }
 
@@ -1025,7 +2613,7 @@ const AddPost = (props: AddPostProps | any): JSX.Element => {
     );
 
     if (typeof document !== undefined) {
-      let buttEle: any = document.getElementById('clickmebutton');
+      const buttEle: any = document.getElementById('clickmebutton');
       if (buttEle != null) {
         buttEle.value = '';
       }
@@ -1043,7 +2631,7 @@ const AddPost = (props: AddPostProps | any): JSX.Element => {
     );
 
     if (typeof document !== undefined) {
-      let buttEle: any = document.getElementById('clickmebutton2');
+      const buttEle: any = document.getElementById('clickmebutton2');
       if (buttEle != null) {
         buttEle.value = '';
       }
@@ -1054,7 +2642,7 @@ const AddPost = (props: AddPostProps | any): JSX.Element => {
   function clickCrossVideoButton() {
     setVideoLink([]);
     if (typeof document !== undefined) {
-      let buttEle: any = document.getElementById('clickmebutton3');
+      const buttEle: any = document.getElementById('clickmebutton3');
       if (buttEle != null) {
         buttEle.value = '';
       }
@@ -1071,440 +2659,1170 @@ const AddPost = (props: AddPostProps | any): JSX.Element => {
     }
   }
 
+  // const handleAll  = ( ) => {
+
+  // }
+  const closeModal = () => {
+    setModalForData(false);
+    setShowup('up');
+  };
+
+  // let [modalVoteData, setModalVoteData] = useState(allUpVotes);
+
+  const handleUp = () => {
+    setShowup('up');
+  };
+
+  const handleDown = () => {
+    setShowup('down');
+  };
+  const ModalForReactions = () => {
+    return (
+      <Modal
+        show={modalForData}
+        onHide={closeModal}
+        backdrop="static"
+        keyboard={false}
+        centered
+        animation={true}
+        scrollable={true}
+        className={addPostCss.modal}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title style={{ color: '#283895' }}>Reactions</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className={addPostCss.modalBody}>
+          <div className={addPostCss.btnConatiner}>
+            {/* <button
+                onClick={handleAll}
+                // className={allFilterState ? addPostCss.active : addPostCss.filterBtn}
+              >
+                ALL
+              </button> */}
+            <button
+              onClick={handleUp}
+              className={addPostCss.filterBtn}
+              style={{ color: '#000E46' }}
+            >
+              Up
+            </button>
+            <button
+              onClick={handleDown}
+              className={addPostCss.filterBtn}
+              style={{ color: '#000E46' }}
+            >
+              Down
+            </button>
+          </div>
+          {showUp === 'up'
+            ? allUpVotes?.map((user: any, id) => {
+                return (
+                  <div key={id} className={addPostCss.modalUserContainer}>
+                    <div className={addPostCss.modalUserDetailContainer}>
+                      <img className={addPostCss.userImg} src={Profile.src} alt="Profile Image" />
+                      <div>
+                        <div>{user?.firstName}</div>
+                        <div>{user?.objectId}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            : allDownVote?.map((user: any, id) => {
+                return (
+                  <div key={id} className={addPostCss.modalUserContainer}>
+                    <div className={addPostCss.modalUserDetailContainer}>
+                      <img className={addPostCss.userImg} src={Profile.src} alt="Profile Image" />
+                      <div>
+                        <div>{user?.firstName}</div>
+                        <div>{user?.objectId}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="" onClick={closeModal} className="closeButton">
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
+    );
+  };
+
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  // const hours = String(now.getHours()).padStart(2, '0');
+  // const minutes = String(now.getMinutes()).padStart(2, '0');
+  const minDate = `${year}-${month}-${day}`;
+
+  function emptyEvent() {
+    setEventPost('');
+  }
+
+  function submitEventForm(event: any) {
+    event.preventDefault();
+    if (eventType === 'Select Event Type') {
+      setShowNofitication(true);
+      setToastError(true);
+      setToastMessage('Please Select Event Type !');
+      return;
+    }
+    const title = event.target[1].value;
+    const date = event.target[2].value;
+    const time = event.target[3].value;
+    const description = event.target[5].value;
+
+    setEventPost({
+      event: {
+        title: title,
+        description: description,
+        eventType: eventType,
+        eventDate: `${date}T${time}`,
+      },
+    });
+    setShowEvent(false);
+    event.currentTarget?.reset();
+    setEventType('Select Event Type');
+  }
+
+  const [showPollForm, setShowPollForm] = useState(false);
+  const option1Id = generateUniqueId();
+  const option2Id = generateUniqueId();
+  const option1 = {
+    id: option1Id,
+    name: 1,
+    placeholder: 1,
+    optionSequence: 0,
+    optionText: '',
+    cannotDelete: true,
+  };
+  const option2 = {
+    id: option2Id,
+    name: 2,
+    placeholder: 2,
+    optionSequence: 1,
+    optionText: '',
+    cannotDelete: true,
+  };
+  const [pollFormOptions, setPollFormOptions] = useState<any>([option1, option2]);
+  const [pollOptionCount, setPollOptionCount] = useState(2);
+  const [isOptionsThreshold, setoptionsThreshold] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+
+  function addPollOption() {
+    if (pollOptionCount < 4) {
+      setPollOptionCount((prevCount) => {
+        return prevCount + 1;
+      });
+      const option = {
+        id: option2Id,
+        name: pollOptionCount + 1,
+        placeholder: pollOptionCount + 1,
+        optionText: '',
+        optionSequence: pollOptionCount,
+        cannotDelete: false,
+      };
+      setPollFormOptions((prevState: any) => {
+        return [...prevState, option];
+      });
+
+      if (pollOptionCount + 1 >= 4) {
+        setoptionsThreshold(true);
+      }
+    }
+  }
+  function deleteLastPollOption(optionId: any, event: any) {
+    event.preventDefault();
+    // if (pollOptionCount > 2) {
+    //   setPollFormOptions((prev: any) => {
+    //     const newOptions = [];
+    //     for (let i = 0; i < prev.length - 1; i++) {
+    //       newOptions.push(prev[i]);
+    //     }
+    //     return newOptions;
+    //   });
+    //   setPollOptionCount((prevCount) => prevCount - 1);
+    // }
+    // if (pollOptionCount - 1 < 4) {
+    //   setoptionsThreshold(false);
+    // }
+    // setIsDeleteOptionThreshold(pollOptionCount - 1 <= 2);
+    const optionIndex = pollFormOptions.findIndex((option: any) => option.id === optionId);
+    if (optionIndex !== -1) {
+      const newOptions = [...pollFormOptions];
+      newOptions.splice(optionIndex, 1);
+      for (let i = 0; i < newOptions.length; i++) {
+        newOptions[i].optionSequence = i.toString();
+        newOptions[i].name = `${i + 1}`;
+        newOptions[i].placeholder = `${i + 1}`;
+      }
+      setPollFormOptions(newOptions);
+      setPollOptionCount((prevCount) => prevCount - 1);
+      if (pollOptionCount - 1 < 4) {
+        setoptionsThreshold(false);
+      }
+    }
+  }
+
+  function clearPollForm() {
+    setPollQuestion('');
+    setPollFormOptions([option1, option2]);
+    setPollOptionCount(2);
+  }
+
+  function pollOptionUpdate(id: any, e: any) {
+    e.preventDefault();
+    setPollFormOptions((prevOptions: any) => {
+      return prevOptions.map((option: any) => {
+        if (option.id === id) {
+          return { ...option, optionText: e.target.value };
+        } else {
+          return option;
+        }
+      });
+    });
+  }
+
+  function updatePollQuestion(e: any) {
+    e.preventDefault();
+    setPollQuestion(e.target.value);
+  }
+
+  function emptyPollPost() {
+    setPollPost('');
+  }
+
+  function submitPollForm(event: any) {
+    event.preventDefault();
+    const newArr = pollFormOptions.map((options: any) => {
+      return {
+        optionSequence: options.optionSequence,
+        optionText: options.optionText,
+        responsePercentage: options.responsePercentage,
+        responseCount: options.responseCount,
+      };
+    });
+    const pollVar = {
+      poll: {
+        pollQuestion: pollQuestion,
+        pollOptions: newArr,
+      },
+    };
+    setPollPost({
+      poll: pollVar.poll,
+    });
+    clearPollForm();
+    setShowPollForm(false);
+  }
+
+  const [eventImage, setEventImage] = useState(
+    'https://chinchincelebration.com/wp-content/uploads/2019/08/product-launch-events-min.png'
+  );
+
+  if (typeof window !== 'undefined')
+    window?.addEventListener('scroll', () => {
+      const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+      if (scrollTop + clientHeight >= scrollHeight) {
+        HandleScrollEvent();
+      }
+    });
+
   return (
     <>
-      <div style={{ padding: '10px', backgroundColor: 'lightgrey', margin: '15px' }}>
-        <div style={{ marginBottom: '40px' }}>
-          <div className="AddPostContainer">
-            <div className="AddPostField" style={{ display: 'flex', alignItems: 'center' }}>
-              <img
-                style={{ float: 'left' }}
-                src="https://cdn-icons-png.flaticon.com/512/1144/1144811.png"
-                alt="Profile-Pic"
-                width="60px"
-              ></img>
-              <button
-                onClick={() => setShowForm1(!showForm1)}
-                aria-controls="showAddPostEditorContainer"
-                aria-expanded={showForm1}
-                className="addPostButton"
-              >
-                <h4>
-                  {props?.fields?.data?.datasource?.placeholderText?.jsonValue?.value
-                    ? props?.fields?.data?.datasource?.placeholderText?.jsonValue?.value
-                    : "What's on your mind"}
-                  {`, `}
-                  <span>
-                    {userObject?.firstName ? userObject?.firstName : 'Mr. John Doe'}{' '}
-                    {userObject?.lastName ? userObject?.lastName : ''}
-                  </span>
-                </h4>
-              </button>
-              {/* <Modal show={showForm1} onHide={handleClose1}>
-            <Modal.Header closeButton>
-              <Modal.Title>Modal heading</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <Form onSubmit={handleSubmit}>
-                <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
-                  <Form.Label>Post Heading</Form.Label>
-                  <Form.Control
-                    onChange={(e) => setPostHeadingValue(e.target.value)}
-                    value={postHeading}
-                    type="text"
-                    placeholder="Post Heading"
-                    required
-                    autoFocus
-                  />
-                </Form.Group>
-                <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
-                  <Form.Label>Post Content</Form.Label>
-                  <Form.Control
-                    onChange={(e) => setPostTextValue(e.target.value)}
-                    value={postText}
-                    as="textarea"
-                    rows={7}
-                    placeholder="Post Text"
-                    required
-                  />
-                </Form.Group>
-              </Form>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={handleClose1}>
-                Close
-              </Button>
-              <Button variant="primary" type="submit" onClick={handleSubmit}>
-                Save Post
-              </Button>
-            </Modal.Footer>
-          </Modal> */}
-            </div>
-            {/* <div className="AddPostItems">
-          {postItems.length == 0 ? (
-            <>
-              <div>
-                <button>
-                  <span>Image</span>
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/4904/4904233.png"
-                    alt="PostItems"
-                    width="30px"
-                  ></img>
-                </button>
-              </div>
-              <div>
-                <button>
-                  <span>Event</span>
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/2693/2693507.png"
-                    alt="PostItems"
-                    width="30px"
-                  ></img>
-                </button>
-              </div>
-              <div>
-                <button>
-                  <span>Poll</span>
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/2668/2668889.png"
-                    alt="PostItems"
-                    width="30px"
-                  ></img>
-                </button>
-              </div>
-              <div>
-                <button>
-                  <span>Activity</span>
-                  <img
-                    src="https://cdn-icons-png.flaticon.com/512/4336/4336647.png"
-                    alt="PostItems"
-                    width="30px"
-                  ></img>
-                </button>
-              </div>
-            </>
-          ) : (
-            postItems
-          )}
-        </div> */}
-          </div>
-          <Collapse in={showForm1}>
+      <div
+        className={`${styles.mainContainer} ${darkMode ? darkModeCss.grey_3 : ''}`}
+        style={ifNoMoreData ? {} : { paddingBottom: '300px' }}
+      >
+        {!isEditorHidden ? (
+          <>
             <div
-              className="AddPostEditorContainer"
-              style={{ maxWidth: '100%' }}
-              id="showAddPostEditorContainer"
+              className={`${styles.addPostWidgetContainer} ${darkMode ? darkModeCss.grey_2 : ''}`}
             >
-              <div className="AddPostField">
-                <Form style={{ border: '1px', borderColor: 'black' }}>
-                  <Form.Group className="mb-3" controlId="exampleForm.ControlInput1">
-                    <Form.Control
-                      onChange={(e) => setPostTextValue(e.target.value)}
-                      value={postText}
-                      as="textarea"
-                      rows={7}
-                      placeholder="Share Your Thoughts..."
-                      required
-                      style={{ border: 'none', resize: 'none' }}
+              {/* <div style={{ marginBottom: '40px' }}> */}
+              <div className={styles.addPostFieldContainer}>
+                <div className={styles.addPostField}>
+                  <div className={styles.addPostImage}>
+                    <Link href={`${viewProfileLinkUrl}${userObject?.objectId}`} passHref={true}>
+                      <img
+                        src={
+                          userObject?.profilePictureUrl ? userObject?.profilePictureUrl : user.src
+                        }
+                        alt="Profile-Pic"
+                        width={40}
+                        height={40}
+                      />
+                    </Link>
+                  </div>
+                  {showForm1 ? (
+                    <Collapse in={showForm1}>
+                      <div
+                        className="AddPostEditorContainer"
+                        style={{ maxWidth: '100%' }}
+                        id="showAddPostEditorContainer"
+                      >
+                        <div className={styles.addTextEditor}>
+                          <Form style={{ border: '1px', borderColor: 'black' }}>
+                            <Form.Group controlId="exampleForm.ControlInput1">
+                              <Editor
+                                editorState={editorState}
+                                onEditorStateChange={(e) => onEditorStateChangeHandler(e)}
+                                wrapperClassName="wrapper-class"
+                                editorClassName="editor-class"
+                                toolbarClassName="toolbar-class"
+                                editorStyle={{
+                                  height: '200px',
+                                  padding: '0px 10px',
+                                  fontSize: '13px',
+                                }}
+                                placeholder="Share Your Thoughts..."
+                                toolbar={toolbar}
+                                // toolbarOnFocus={true}
+                                mention={{
+                                  separator: ' ',
+                                  trigger: '@',
+                                  suggestions: mentionUserData,
+                                }}
+                                hashtag={{}}
+                              />
+                              {/* <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <div>
+                            {currentCount}/{5000} characters
+                          </div>
+                        </div> */}
+                              {/* <Form.Control
+                          onChange={(e) => setPostTextValue(e.target.value)}
+                          value={postText}
+                          as="textarea"
+                          rows={7}
+                          placeholder="Share Your Thoughts..."
+                          required
+                          style={{ border: 'none', resize: 'none' }}
+                        /> */}
+                            </Form.Group>
+                            <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                              {file.map((img: any, num: any) => {
+                                return (
+                                  <div
+                                    key={num}
+                                    style={{
+                                      borderRadius: '30px',
+                                      margin: '0px 15px 15px 0px',
+                                    }}
+                                  >
+                                    <button
+                                      type="button"
+                                      style={{
+                                        position: 'absolute',
+                                        border: 'none',
+                                        borderRadius: '15px',
+                                      }}
+                                      onClick={() => clickCrossImageButton(img.id)}
+                                    >
+                                      <img
+                                        width="30px"
+                                        src="https://cdn-icons-png.flaticon.com/32/3416/3416079.png"
+                                        alt="cross_button"
+                                        style={{ borderRadius: '30px' }}
+                                      ></img>
+                                    </button>
+                                    <img width="300px" src={img?.url} alt={img?.id}></img>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div
+                              style={{ display: 'flex', flexWrap: 'wrap', flexDirection: 'column' }}
+                            >
+                              {docs.map((doc: any, num: any) => {
+                                return (
+                                  <div className="docPreviewContainer" key={num}>
+                                    <span className="openPrevButton">
+                                      <button
+                                        onClick={() => openDoc(doc?.url)}
+                                        style={{
+                                          padding: '5px',
+                                          borderRadius: '20px',
+                                          borderColor: 'white',
+                                        }}
+                                      >
+                                        <img
+                                          width="50px"
+                                          src="https://cdn-icons-png.flaticon.com/512/2991/2991112.png"
+                                          alt={num}
+                                          style={{ margin: '10px' }}
+                                        ></img>
+                                        {doc.name}
+                                      </button>
+                                    </span>
+
+                                    <span>
+                                      <button
+                                        style={{ border: 'none', backgroundColor: 'white' }}
+                                        type="button"
+                                        onClick={() => clickCrossDocButton(doc.id)}
+                                      >
+                                        <img
+                                          width="30px"
+                                          src="https://cdn-icons-png.flaticon.com/512/3416/3416079.png"
+                                          alt="cross_button"
+                                          style={{ marginLeft: '10px' }}
+                                        ></img>
+                                      </button>
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap' }} id="setVideoPreview">
+                              {videoLink.map((video: any, num: any) => {
+                                return (
+                                  <div key={num}>
+                                    <video width="100%" src={video?.url} controls></video>
+                                    <div>
+                                      <img
+                                        width="50px"
+                                        src="https://cdn-icons-png.flaticon.com/512/711/711245.png"
+                                        alt={num}
+                                        style={{ margin: '10px' }}
+                                      ></img>
+                                      <span>
+                                        {video.name}
+                                        <button
+                                          style={{ border: 'none', backgroundColor: 'white' }}
+                                          type="button"
+                                          onClick={clickCrossVideoButton}
+                                        >
+                                          <img
+                                            width="30px"
+                                            src="https://cdn-icons-png.flaticon.com/512/3416/3416079.png"
+                                            alt="cross_button"
+                                            style={{ marginLeft: '10px' }}
+                                          ></img>
+                                        </button>
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div>
+                              {eventPost?.event?.title ? (
+                                <div style={{ display: 'grid' }}>
+                                  <button
+                                    style={{
+                                      position: 'absolute',
+                                      justifySelf: 'flex-end',
+                                      marginTop: '20px',
+                                      border: 'none',
+                                      borderRadius: '20px',
+                                      marginRight: '20px',
+                                    }}
+                                    type="button"
+                                    onClick={() => emptyEvent()}
+                                  >
+                                    <img
+                                      width="30px"
+                                      src="https://cdn-icons-png.flaticon.com/32/1617/1617543.png "
+                                      alt="crossButton"
+                                    />
+                                  </button>
+                                  <EventCard
+                                    heading={eventPost?.event?.title}
+                                    description={eventPost?.event?.description}
+                                    date={eventPost?.event?.eventDate}
+                                    eventType={eventPost?.event?.eventType}
+                                    url={getEventImage(eventPost?.event?.eventType)}
+                                  />
+                                </div>
+                              ) : (
+                                ''
+                              )}
+                            </div>
+                            <div>
+                              {pollPost?.poll?.pollQuestion ? (
+                                <div
+                                  style={{
+                                    padding: '12px',
+                                    border: '1px solid darkgrey',
+                                    borderRadius: '20px',
+                                    margin: '16px',
+                                  }}
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => emptyPollPost()}
+                                    style={{
+                                      border: 'none',
+                                      backgroundColor: 'white',
+                                      position: 'relative',
+                                      float: 'right',
+                                      padding: '0px',
+                                      borderRadius: '30px',
+                                      marginTop: '5%',
+                                      marginRight: '5%',
+                                    }}
+                                  >
+                                    <img
+                                      width="30px"
+                                      src="https://cdn-icons-png.flaticon.com/32/1617/1617543.png"
+                                      alt="crossButton"
+                                    />
+                                  </button>
+                                  <PollCard pollPost={pollPost} />
+                                </div>
+                              ) : (
+                                ''
+                              )}
+                            </div>
+                          </Form>
+                        </div>
+                      </div>
+                    </Collapse>
+                  ) : (
+                    <button
+                      className={styles.addPostButton}
+                      onClick={() => setShowForm1(!showForm1)}
+                      aria-controls="showAddPostEditorContainer"
+                      aria-expanded={showForm1}
+                    >
+                      <div className={styles.addPostHeading}>
+                        {props?.fields?.data?.datasource?.placeholderText?.jsonValue?.value
+                          ? props?.fields?.data?.datasource?.placeholderText?.jsonValue?.value
+                          : "What's on your mind"}
+                        {``}
+                        {/* <span>
+                    {userObject?.firstName ? userObject?.firstName : ''}{' '}
+                    {userObject?.lastName ? userObject?.lastName : ''}
+                  </span> */}
+                      </div>
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className={styles.AddPostItems}>
+                <div>
+                  <button
+                    className={styles.addPostFileButtons}
+                    onClick={() => {
+                      setShowForm1(true);
+                      clickmebuttonHandler();
+                    }}
+                    disabled={disableAddImage}
+                    type="button"
+                  >
+                    {/* <span>Image</span> */}
+                    <NextImage
+                      field={image}
+                      editable={true}
+                      style={{ opacity: disableAddImage ? '0.2' : '1' }}
+                      alt="Profile-Pic"
+                      width={18}
+                      height={18}
+                      title="Add a Image"
                     />
-                  </Form.Group>
-                  <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-                    {file.map((img: any, num: any) => {
-                      return (
-                        <>
+
+                    <Form.Group
+                    // className="mb-3"
+                    >
+                      <Form.Control
+                        style={{ display: 'none' }}
+                        onChange={(e) => setPostImageValue(e)}
+                        // value={postImage}
+                        type="file"
+                        placeholder="Post Text"
+                        // multiple
+                        accept="image/*"
+                        id="clickmebutton"
+                      />
+                    </Form.Group>
+                  </button>
+                  <button
+                    className={styles.addPostFileButtons}
+                    onClick={() => {
+                      setShowForm1(true);
+                      clickmebuttonHandler3();
+                    }}
+                    disabled={disableAddVideo}
+                    type="button"
+                  >
+                    {/* <span>Video</span> */}
+                    <NextImage
+                      field={videoIcon}
+                      editable={true}
+                      alt="PostItems"
+                      width={18}
+                      height={18}
+                      style={{ opacity: disableAddVideo ? '0.2' : '1' }}
+                      title="Add a Video"
+                    />
+                    <Form.Group
+                    // className="mb-3"
+                    >
+                      <Form.Control
+                        style={{ display: 'none' }}
+                        onChange={(e) => setPostVideoValue(e)}
+                        type="file"
+                        placeholder="Post Video"
+                        // multiple
+                        accept=".mp4"
+                        id="clickmebutton3"
+                      />
+                    </Form.Group>
+                  </button>
+                  <button
+                    disabled={disableAddVideo}
+                    className={styles.addPostFileButtons}
+                    onClick={() => {
+                      setShowForm1(true);
+                      clickmebuttonHandler2();
+                    }}
+                    type="button"
+                  >
+                    {/* <span>Doc</span> */}
+                    <NextImage
+                      field={pin}
+                      editable={true}
+                      alt="PostItems"
+                      width={18}
+                      height={18}
+                      style={{ opacity: disableAddDoc ? '0.2' : '1' }}
+                      title="Add a Attachment"
+                    />
+                    <Form.Group
+                    // className="mb-3"
+                    >
+                      <Form.Control
+                        style={{ display: 'none' }}
+                        onChange={(e) => setPostDocValue(e)}
+                        // value={postImage}
+                        type="file"
+                        placeholder="Post Text"
+                        // multiple
+                        accept=".pdf,.doc,.docx,.txt"
+                        id="clickmebutton2"
+                      />
+                    </Form.Group>
+                  </button>
+                  <button
+                    className={styles.addPostFileButtons}
+                    onClick={() => {
+                      setShowForm1(true);
+                      setShowEvent(true);
+                    }}
+                    type="button"
+                    disabled={disableAddEvent}
+                  >
+                    {/* <span>Event</span> */}
+                    <NextImage
+                      field={createEventIcon}
+                      style={{ opacity: disableAddEvent ? '0.2' : '1' }}
+                      editable={true}
+                      alt="PostItems"
+                      width={18}
+                      height={18}
+                      title="Create a Event"
+                    />
+                  </button>
+                  <Modal
+                    className={styles.AddEventModalContent}
+                    show={showEvent}
+                    onHide={() => setShowEvent(false)}
+                    backdrop="static"
+                    keyboard={false}
+                    centered
+                    scrollable={true}
+                    onExit={() => {
+                      setEventType('Select Event Type');
+                    }}
+                  >
+                    <div className={styles.eventPostContainer}>
+                      <Form onSubmit={(e: any) => submitEventForm(e)} style={{ fontSize: '14px' }}>
+                        <Modal.Header closeButton>
+                          <Modal.Title className={styles.AddEventModalHeader}>
+                            Create Event Post
+                          </Modal.Title>
+                        </Modal.Header>
+                        <div className={styles.AddEventModalBody}>
+                          <img width="100%" src={eventImage} alt="Event Image" />
+                        </div>
+                        <Modal.Body>
+                          <div className={styles.AddEventModalProfile}>
+                            <div className={styles.AddEventModalProfilePic}>
+                              <img
+                                src={
+                                  userObject?.profilePictureUrl
+                                    ? userObject?.profilePictureUrl
+                                    : Profile.src
+                                }
+                                alt="Profile Image"
+                              />
+                            </div>
+                            <div style={{ alignSelf: 'center' }}>
+                              <div style={{ fontSize: '1rem', fontWeight: '600' }}>
+                                {userObject?.firstName
+                                  ? `${userObject?.firstName} ${userObject?.lastName}`
+                                  : 'John Doe'}
+                              </div>
+                              {/* <div style={{ fontSize: '14px', color: 'grey' }}>Profile</div> */}
+                            </div>
+                          </div>
+                          <Form.Group className="mb-3">
+                            <Form.Control
+                              className={styles.AddEventModalEventName}
+                              style={{ fontSize: '18px', color: 'black', fontWeight: '800px' }}
+                              required
+                              type="text"
+                              placeholder="Event Name"
+                            />
+                          </Form.Group>
                           <div
-                            key={num}
-                            style={{
-                              borderRadius: '30px',
-                              margin: '0px 15px 15px 0px',
+                            style={{ display: 'flex', gap: '12px' }}
+                            className={`${styles.AddEventModalEventDates} mb-3`}
+                          >
+                            <Form.Group>
+                              <Form.Control
+                                required
+                                type="date"
+                                placeholder="Event Date"
+                                className={styles.DateInput}
+                                min={minDate}
+                              />
+                            </Form.Group>
+                            <Form.Group>
+                              <Form.Control
+                                className={styles.TimeInput}
+                                required
+                                type="time"
+                                placeholder="Event Time"
+                              />
+                            </Form.Group>
+                          </div>
+                          <Form.Group className="mb-3">
+                            <Dropdown className="eventTypeDropdown">
+                              <Dropdown.Toggle
+                                variant="secondary"
+                                id="dropdown-basic"
+                                style={{
+                                  width: '100%',
+                                }}
+                                className={styles.eventTypeDropdownToggle}
+                              >
+                                {eventType}
+                              </Dropdown.Toggle>
+
+                              <Dropdown.Menu>
+                                {props?.fields?.data?.datasource?.eventType?.targetItems?.map(
+                                  (item: any, index: number) => {
+                                    return (
+                                      <Dropdown.Item
+                                        href="#"
+                                        key={index}
+                                        onClick={() => {
+                                          setEventType(item?.title?.jsonValue?.value);
+                                          setEventImage(item?.image?.jsonValue?.value?.href);
+                                        }}
+                                        className={styles.eventModalDropdownItem}
+                                      >
+                                        {item?.title?.jsonValue?.value}
+                                      </Dropdown.Item>
+                                    );
+                                  }
+                                )}
+                              </Dropdown.Menu>
+                            </Dropdown>
+                            {/* <div style={{ height: '40px' }}>
+                          {eventTypeSelectError ? (
+                            <div style={{ color: 'red', fontSize: '12px', fontWeight: '1000' }}>
+                              * Please Select Valid Event Type
+                            </div>
+                          ) : (
+                            ''
+                          )}
+                        </div> */}
+                          </Form.Group>
+                          <Form.Group className="mb-3">
+                            <Form.Control
+                              className={`${styles.AddEventModalEventName} ${styles.AddEventModalEventDescription}`}
+                              required
+                              as="textarea"
+                              rows={2}
+                              placeholder="Description"
+                              style={{ resize: 'none' }}
+                            />
+                          </Form.Group>
+                        </Modal.Body>
+                        <Modal.Footer>
+                          <Button
+                            className={styles.eventModalCancel}
+                            variant="secondary"
+                            onClick={() => {
+                              setShowEvent(false);
+                              setEventType('Select Event Type');
                             }}
                           >
-                            <button
-                              type="button"
-                              style={{ position: 'absolute', border: 'none', borderRadius: '15px' }}
-                              onClick={() => clickCrossImageButton(img.id)}
-                            >
+                            Cancel
+                          </Button>
+                          <Button
+                            className={styles.eventModalAddToPost}
+                            variant="secondary"
+                            type="submit"
+                            // onClick={onPostReported}
+                          >
+                            Add Event to Post
+                          </Button>
+                        </Modal.Footer>
+                      </Form>
+                    </div>
+                  </Modal>
+                  <button
+                    className={styles.addPostFileButtons}
+                    onClick={() => {
+                      setShowForm1(true);
+                      setShowPollForm(true);
+                    }}
+                    type="button"
+                    disabled={disableAddPoll}
+                  >
+                    {/* <span>Poll</span> */}
+                    <NextImage
+                      field={pollIcon}
+                      editable={true}
+                      alt="PostItems"
+                      style={{ opacity: disableAddPoll ? '0.2' : '1' }}
+                      width={18}
+                      height={18}
+                      title="Create a Poll"
+                    />
+                  </button>
+                  <Modal
+                    // className={styles.reportPostModalContent}
+                    show={showPollForm}
+                    onHide={() => setShowPollForm(false)}
+                    backdrop="static"
+                    keyboard={false}
+                    centered
+                    scrollable={true}
+                    onExit={() => {
+                      clearPollForm();
+                    }}
+                    size="lg"
+                  >
+                    <div className={addPostCss.addPollFormContainer}>
+                      <Form
+                        onSubmit={(e: any) => submitPollForm(e)}
+                        style={{ fontSize: '15px', margin: '5px' }}
+                      >
+                        <Modal.Header closeButton>
+                          <Modal.Title className={styles.AddEventModalHeader}>
+                            Create Poll
+                          </Modal.Title>
+                        </Modal.Header>
+                        <Modal.Body>
+                          <div className={styles.AddEventModalProfile}>
+                            <div className={styles.AddEventModalProfilePic}>
                               <img
-                                width="30px"
-                                src="https://cdn-icons-png.flaticon.com/512/3416/3416079.png"
-                                alt="cross_button"
-                                style={{ borderRadius: '30px' }}
-                              ></img>
+                                src={
+                                  userObject?.profilePictureUrl
+                                    ? userObject?.profilePictureUrl
+                                    : Profile.src
+                                }
+                                alt="Profile Image"
+                              />
+                            </div>
+                            <div style={{ alignSelf: 'center' }}>
+                              <div style={{ fontSize: '1rem', fontWeight: '600' }}>
+                                {userObject?.firstName
+                                  ? `${userObject?.firstName} ${userObject?.lastName}`
+                                  : 'John Doe'}
+                              </div>
+                              {/* <div style={{ fontSize: '14px', color: 'grey' }}>Profile</div> */}
+                            </div>
+                          </div>
+                          <Form.Group className="mb-3">
+                            <Form.Control
+                              className={addPostCss.pollQuestion}
+                              value={pollQuestion}
+                              onChange={(e) => updatePollQuestion(e)}
+                              required
+                              type="text"
+                              placeholder="Write something..."
+                            />
+                          </Form.Group>
+                          <div
+                            className={`CreatePollOptions mb-3 ${addPostCss.pollOptionContainer}`}
+                          >
+                            <div
+                              style={{
+                                marginBottom: '10px',
+                                fontSize: '16px',
+                                fontWeight: '500',
+                                marginLeft: '5px',
+                              }}
+                            >
+                              Add Poll
+                            </div>
+                            {pollFormOptions.map((option: any, index: number) => {
+                              return (
+                                <Form.Group className="mb-3" id={option?.id} key={index}>
+                                  <div style={{ display: 'flex' }}>
+                                    <Form.Control
+                                      required
+                                      type="textarea"
+                                      value={option?.optionText}
+                                      onChange={(e) => pollOptionUpdate(option?.id, e)}
+                                      placeholder={`Option ${option?.name}`}
+                                      className={addPostCss.pollFormInput}
+                                    />
+                                    <button
+                                      style={{
+                                        border: 'none',
+                                        backgroundColor: 'white',
+                                        marginLeft: '4px',
+                                        display: option?.cannotDelete ? 'none' : '',
+                                      }}
+                                      onClick={(e) => deleteLastPollOption(option?.id, e)}
+                                    >
+                                      <NextImage
+                                        field={pollCross}
+                                        editable={true}
+                                        alt="cross"
+                                        width={24}
+                                        height={24}
+                                      />
+                                    </button>
+                                  </div>
+                                </Form.Group>
+                              );
+                            })}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <button
+                              className={addPostCss.addOptionButton}
+                              type="button"
+                              onClick={() => addPollOption()}
+                              disabled={isOptionsThreshold}
+                              style={{
+                                backgroundColor: isOptionsThreshold ? '#e8e8e8' : '#47D7AC',
+                              }}
+                            >
+                              + Add option
                             </button>
-                            <img width="300px" src={img.value} alt={img.id}></img>
+                            {/* <button
+                              style={{
+                                padding: '12px',
+                                border: 'none',
+                                fontSize: '18px',
+                                borderRadius: '12px',
+                              }}
+                              type="button"
+                              onClick={() => deleteLastPollOption()}
+                              disabled={isDeleteOptionThreshold}
+                            >
+                              - Delete option
+                            </button> */}
                           </div>
-                        </>
-                      );
-                    })}
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', flexDirection: 'column' }}>
-                    {docs.map((doc: any, num: any) => {
-                      return (
-                        <>
-                          <div className="docPreviewContainer" key={num}>
-                            <span className="openPrevButton">
-                              <button
-                                onClick={() => openDoc(doc.value)}
-                                style={{
-                                  padding: '5px',
-                                  borderRadius: '20px',
-                                  borderColor: 'white',
-                                }}
-                              >
-                                <img
-                                  width="50px"
-                                  src="https://cdn-icons-png.flaticon.com/512/2991/2991112.png"
-                                  alt={num}
-                                  style={{ margin: '10px' }}
-                                ></img>
-                                {doc.name}
-                              </button>
-                            </span>
-
-                            <span>
-                              <button
-                                style={{ border: 'none', backgroundColor: 'white' }}
-                                type="button"
-                                onClick={() => clickCrossDocButton(doc.id)}
-                              >
-                                <img
-                                  width="30px"
-                                  src="https://cdn-icons-png.flaticon.com/512/3416/3416079.png"
-                                  alt="cross_button"
-                                  style={{ marginLeft: '10px' }}
-                                ></img>
-                              </button>
-                            </span>
-                          </div>
-                        </>
-                      );
-                    })}
-                  </div>
-
-                  <div style={{ display: 'flex', flexWrap: 'wrap' }} id="setVideoPreview">
-                    <hr />
-                    {videoLink.map((video: any, num: any) => {
-                      return (
-                        <>
-                          <video width="100%" controls src={video.value} />
-                          <div key={num}>
-                            <img
-                              width="50px"
-                              src="https://cdn-icons-png.flaticon.com/512/711/711245.png"
-                              alt={num}
-                              style={{ margin: '10px' }}
-                            ></img>
-                            <span>
-                              {video.name}
-                              <button
-                                style={{ border: 'none', backgroundColor: 'white' }}
-                                type="button"
-                                onClick={clickCrossVideoButton}
-                              >
-                                <img
-                                  width="30px"
-                                  src="https://cdn-icons-png.flaticon.com/512/3416/3416079.png"
-                                  alt="cross_button"
-                                  style={{ marginLeft: '10px' }}
-                                ></img>
-                              </button>
-                            </span>
-                          </div>
-                        </>
-                      );
-                    })}
-                  </div>
-                  <hr />
-                  <div className="AddPostItems">
-                    <div>
-                      <button onClick={clickmebuttonHandler} type="button">
-                        <span>Image</span>
-                        <img
-                          src="https://cdn-icons-png.flaticon.com/512/16/16410.png"
-                          alt="PostItems"
-                          width="30px"
-                        ></img>{' '}
-                        <Form.Group className="mb-3">
-                          <Form.Control
-                            style={{ display: 'none' }}
-                            onChange={(e) => setPostImageValue(e)}
-                            // value={postImage}
-                            type="file"
-                            placeholder="Post Text"
-                            multiple
-                            accept="image/*"
-                            id="clickmebutton"
-                          />
-                        </Form.Group>
-                      </button>
+                        </Modal.Body>
+                        <Modal.Footer>
+                          <Button
+                            className={styles.eventModalCancel}
+                            variant="secondary"
+                            onClick={() => {
+                              clearPollForm();
+                            }}
+                          >
+                            Clear
+                          </Button>
+                          <Button
+                            className={styles.eventModalAddToPost}
+                            variant="secondary"
+                            type="submit"
+                          >
+                            <span>Add Poll</span>
+                          </Button>
+                        </Modal.Footer>
+                      </Form>
                     </div>
-                    <div>
-                      <button onClick={clickmebuttonHandler2} type="button">
-                        <span>Doc</span>
-                        <img
-                          src="https://cdn-icons-png.flaticon.com/512/2991/2991106.png"
-                          alt="PostItems"
-                          width="30px"
-                        ></img>{' '}
-                        <Form.Group className="mb-3">
-                          <Form.Control
-                            style={{ display: 'none' }}
-                            onChange={(e) => setPostDocValue(e)}
-                            // value={postImage}
-                            type="file"
-                            placeholder="Post Text"
-                            multiple
-                            accept=".pdf,.doc,.docx,.txt"
-                            id="clickmebutton2"
-                          />
-                        </Form.Group>
-                      </button>
-                    </div>
-                    <div>
-                      <button onClick={clickmebuttonHandler3} type="button">
-                        <span>Video</span>
-                        <img
-                          src="https://cdn-icons-png.flaticon.com/512/711/711245.png"
-                          alt="PostItems"
-                          width="30px"
-                        ></img>
-                        <Form.Group className="mb-3">
-                          <Form.Control
-                            style={{ display: 'none' }}
-                            onChange={(e) => setPostVideoValue(e)}
-                            type="file"
-                            placeholder="Post Video"
-                            // multiple
-                            accept=".mp4"
-                            id="clickmebutton3"
-                          />
-                        </Form.Group>
-                      </button>
-                    </div>
-                    <div>
-                      <button type="button">
-                        <span>Event</span>
-                        <img
-                          src="https://cdn-icons-png.flaticon.com/512/2693/2693507.png"
-                          alt="PostItems"
-                          width="30px"
-                        ></img>
-                      </button>
-                    </div>
-                    <div>
-                      <button type="button">
-                        <span>Poll</span>
-                        <img
-                          src="https://cdn-icons-png.flaticon.com/512/2668/2668889.png"
-                          alt="PostItems"
-                          width="30px"
-                        ></img>
-                      </button>
-                    </div>
-                  </div>
-                </Form>
-                <hr />
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  </Modal>
+                  <button
+                    className={styles.addPostFileButtons}
+                    onClick={() => {
+                      setShowForm1(true);
+                    }}
+                    type="button"
+                  >
+                    <Link href="/addblogpost">
+                      <NextImage
+                        field={addBlogIcon}
+                        editable={true}
+                        alt="PostItems"
+                        width={18}
+                        height={18}
+                        style={{ opacity: disableAddDoc ? '0.2' : '1' }}
+                        title="Create a Blog"
+                      />
+                    </Link>
+                  </button>
+                </div>
+                <div className={styles.errorContainer}>
                   <Button
+                    className={styles.publishButton}
+                    disabled={editorState.getCurrentContent().getPlainText() ? false : true}
                     variant="secondary"
                     style={{
-                      boxShadow: !createNewPostError ? 'none' : '0 4px 8px 0 rgba(255, 0, 0, 0.6)',
+                      backgroundColor: editorState.getCurrentContent().getPlainText()
+                        ? '#47D7AC'
+                        : '#FFFFFF',
+                      color: editorState.getCurrentContent().getPlainText() ? '#FFFFFF' : '#A5A9AE',
+                      borderColor: editorState.getCurrentContent().getPlainText()
+                        ? '#47D7AC'
+                        : '#6c757d',
+                      // boxShadow: !createNewPostError ? 'none' : '0 4px 8px 0 rgba(255, 0, 0, 0.6)',
                     }}
                     type="button"
                     onClick={(e) => handleSubmit(e)}
                   >
-                    Publish Post
+                    Post
                   </Button>
-                  <div>
-                    {createNewPostError ? (
-                      <span style={{ fontWeight: 1000, color: 'red', fontSize: '12px' }}>
-                        * Something Went Wrong. Post not uploaded !
-                      </span>
-                    ) : (
-                      ''
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setShowForm1(!showForm1)}
-                  >
-                    Close
-                  </Button>
+                  <Collapse in={showForm1}>
+                    <Button
+                      className={styles.publishButton}
+                      variant="default"
+                      style={{ outline: 'none', border: 'none', color: '#F58C60' }}
+                      type="button"
+                      onClick={() => {
+                        setShowForm1(false);
+                        setEditorState(() => EditorState.createEmpty());
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </Collapse>
+                  {/* {createNewPostError ? (
+                <span style={{ fontWeight: 1000, color: 'red', fontSize: '8px' }}>
+                  * Something Went Wrong. Post not uploaded !
+                </span>
+              ) : (
+                ''
+              )} */}
+                  {/* </div>
+
+              <div> */}
                 </div>
+                {/* <Collapse in={showForm1}> */}
+                {/* <Button
+                className={styles.closeButton}
+                type="button"
+                variant="secondary"
+                onClick={() => setShowForm1(!showForm1)}
+              >
+                Close
+              </Button> */}
+                {/* </Collapse> */}
               </div>
             </div>
-          </Collapse>
-        </div>
-        <div className="postHeading" style={{ marginBottom: '10px' }}>
-          <div className="postHeaderLeft">
-            <h5 className="postOwner mt-2" style={{ fontWeight: '1000' }}></h5>
-            <h4 className="postDate" style={{ fontWeight: '700' }}>
-              Your Posts
-            </h4>
-          </div>
-          <div className="postHeaderRight">
-            <img
-              src="https://cdn-icons-png.flaticon.com/512/3502/3502458.png"
-              alt="pan"
-              width="50px"
-            />
-            <img
-              style={{ marginLeft: '20px' }}
-              src="https://cdn-icons-png.flaticon.com/512/238/238910.png"
-              alt="pan"
-              width="40px"
-            />
-          </div>
-        </div>
-        <div
-          className="AllPostscontainer"
-          id="PostFeedList"
-          style={{
-            maxWidth: '100%',
-            height: '800px',
-            overflowX: 'hidden',
-            scrollbarWidth: 'none',
-          }}
-        >
-          {posts?.length == 0 ? (
-            <span style={{ display: 'flex', padding: '10px', justifyContent: 'center' }}>
-              <span style={{ marginRight: '15px', fontWeight: '600' }}>Loading.. </span>{' '}
-              <Spinner animation="border" />
-            </span>
-          ) : (
-            posts
-          )}
-          {ifReachedEnd ? (
-            !ifNoMoreData ? (
-              <span style={{ display: 'flex', padding: '10px', justifyContent: 'center' }}>
-                <span style={{ marginRight: '15px', fontWeight: '600' }}>Loading.. </span>{' '}
-                <Spinner animation="border" />
-              </span>
-            ) : (
-              <span
-                style={{
-                  display: 'flex',
-                  padding: '10px',
-                  justifyContent: 'center',
-                  backgroundColor: 'lightBlue',
-                  borderRadius: '20px',
-                }}
-              >
-                No More Posts Available{' '}
+            <div className="postHead" style={{ marginBottom: '10px' }}>
+              <div className="postHeaderLeft">
+                <h5 className="postOwner mt-2" style={{ fontWeight: '1000' }}></h5>
+                <h4 className="postDate" style={{ fontWeight: '700' }}>
+                  Your Posts
+                </h4>
+              </div>
+              <div className="postHeaderRight">
                 <img
-                  style={{ marginLeft: '10px' }}
-                  width="25px"
-                  src="https://cdn-icons-png.flaticon.com/512/927/927567.png"
-                  alt="smile"
-                ></img>
-              </span>
-            )
-          ) : (
-            ''
-          )}
+                  src="https://cdn-icons-png.flaticon.com/512/3502/3502458.png"
+                  alt="pan"
+                  width="20px"
+                />
+                <img
+                  style={{ marginLeft: '20px' }}
+                  src="https://cdn-icons-png.flaticon.com/512/238/238910.png"
+                  alt="pan"
+                  width={20}
+                />
+              </div>
+            </div>{' '}
+          </>
+        ) : (
+          ''
+        )}
+        <div className="AllPostscontainer" id="PostFeedList" style={{ maxWidth: '100%' }}>
+          {posts?.length == 0 ? <AddPostSkeleton count={3} /> : posts}
+          <div style={{ height: '50px' }}>
+            {ifReachedEnd ? (
+              !ifNoMoreData ? (
+                <AddPostSkeleton count={1} />
+              ) : (
+                <span
+                  style={{
+                    display: 'flex',
+                    padding: '10px',
+                    justifyContent: 'center',
+                    backgroundColor: 'lightBlue',
+                    borderRadius: '20px',
+                  }}
+                >
+                  No More Posts Available{' '}
+                  <img
+                    style={{ marginLeft: '10px' }}
+                    width="25px"
+                    src="https://cdn-icons-png.flaticon.com/512/927/927567.png"
+                    alt="smile"
+                  ></img>
+                </span>
+              )
+            ) : (
+              ''
+            )}
+          </div>
         </div>
       </div>
+      {showDeletePostPopup ? (
+        <CreateModalPopup
+          popUpVisiable={showDeletePostPopup}
+          setPopUpVisiable={setShowDeletePostPopup}
+          body={'Do you really want to delete this post ?'}
+          buttonName={'Delete'}
+          title={'Delete Confirmation'}
+          buttonClickHandler={confirmationForDelete}
+          disabled={false}
+          id={deletePostId}
+        />
+      ) : (
+        ''
+      )}
+      {showDeleteCommentPopup ? (
+        <CreateModalPopup
+          popUpVisiable={showDeleteCommentPopup}
+          setPopUpVisiable={setShowDeleteCommentPopup}
+          body={`Do you really want to delete this ${
+            deleteCommentId?.replyId ? 'reply' : 'comment'
+          } ?`}
+          buttonName={'Delete'}
+          title={'Delete Confirmation'}
+          buttonClickHandler={confirmationForDeleteComment}
+          disabled={false}
+          id={deleteCommentId}
+        />
+      ) : (
+        ''
+      )}
+      {<ReportPostPopup />}
+      {<BlockUserPopup />}
+      {<ModalForReactions />}
+      {<ReportUserPopup />}
+      {showNotification && (
+        <ToastNotification
+          showNotification={showNotification}
+          success={toastSuccess}
+          error={toastError}
+          message={toastMessage}
+          handleCallback={resetToastState}
+        />
+      )}
     </>
   );
 };
