@@ -7,12 +7,7 @@ import loginUserCall from '../API/loginUserCall';
 import WebContext from '../Context/WebContext';
 import { useRouter } from 'next/router';
 import loginCss from '../assets/login.module.css';
-import darkTheme from '../assets/darkTheme.module.css';
 import Spinner from 'react-bootstrap/Spinner';
-import getUserCall from 'src/API/getUserCall';
-import { encryptString } from '../assets/helpers/EncryptDecrypt';
-import ThemeSwitcher from './ThemeSwitcher';
-import { validateEmail } from 'assets/helpers/validations';
 // import star from '../assets/images/star.png';
 
 type LoginProps = ComponentProps & {
@@ -50,26 +45,16 @@ type DataSource = {
   registerHereLabel: {
     jsonValue: Field<string>;
   };
-  loginFrameImageList: {
-    targetItems: Array<{
-      imageLogin: {
-        jsonValue: ImageField;
-      };
-    }>;
-  };
 };
 
 const Login = (props: LoginProps): JSX.Element => {
   const targetItems = props?.fields?.data?.datasource;
+
   const router = useRouter();
-  const { setIsLoggedIn, setUserToken, setObjectId, userToken, setUserObject, darkMode } = {
-    ...useContext(WebContext),
-  };
+  const { setIsLoggedIn, setUserToken, setObjectId, userToken } = { ...useContext(WebContext) };
 
   let [email, setEmail] = useState('');
-  let [emailValidationMessage, setEmailValidationMessage] = useState('');
   let [password, setPassword] = useState('');
-  let [passwordValidationMessage, setPasswordValidationMessage] = useState('');
   let [emailError, setEmailError] = useState(false);
   let [passwodError, setPasswordError] = useState(false);
   let [ifUnAuthorised, setIfUnauthorised] = useState(false);
@@ -78,14 +63,8 @@ const Login = (props: LoginProps): JSX.Element => {
   function setEmailValue(val: any) {
     if (val === '') {
       setEmailError(true);
-      setEmailValidationMessage(`${targetItems?.userNameLabel?.jsonValue?.value} is mandatory`);
     } else {
-      if (!validateEmail(val)) {
-        setEmailError(true);
-        setEmailValidationMessage(`${targetItems?.userNameLabel?.jsonValue?.value} is not valid`);
-      } else {
-        setEmailError(false);
-      }
+      setEmailError(false);
     }
     setEmail(val);
   }
@@ -93,25 +72,10 @@ const Login = (props: LoginProps): JSX.Element => {
   function setPasswordValue(val: any) {
     if (val === '') {
       setPasswordError(true);
-      setPasswordValidationMessage(`${targetItems?.passwordLabel?.jsonValue?.value} is mandatory`);
     } else {
       setPasswordError(false);
     }
     setPassword(val);
-  }
-
-  function getRouteToUrlFromCookie(): string | null {
-    if (typeof document !== 'undefined') {
-      const cookieString = document.cookie;
-      const cookies = cookieString.split(';').reduce((acc: any, cookie: string) => {
-        const [name, value] = cookie.split('=').map((c) => c.trim());
-        acc[name] = value;
-        return acc;
-      }, {});
-
-      return cookies.routeToUrl || null;
-    }
-    return null;
   }
 
   const onSubmitHandler = async (e: any) => {
@@ -128,27 +92,14 @@ const Login = (props: LoginProps): JSX.Element => {
       let response = await loginUserCall(email, password);
       if (response?.status == 200 && setIsLoggedIn != undefined && setUserToken != undefined) {
         setIsLoggedIn(true);
-        let encTok = await encryptString(response?.data?.data?.access_token);
-        let encObjId = await encryptString(email);
         setUserToken(response?.data?.data?.access_token);
         if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('UserToken', encTok);
-          localStorage.setItem('ObjectId', encObjId);
+          localStorage.setItem('UserToken', response?.data?.data?.access_token);
         }
-        if (setObjectId) setObjectId(email);
-        let getUserResp = await getUserCall(response?.data?.data?.access_token, email);
-        if (setUserObject) setUserObject(getUserResp?.data?.data);
-        if (getUserResp?.data?.success == true) {
-          let encUserObj = encryptString(JSON.stringify(getUserResp?.data?.data));
-          localStorage.setItem('UserObject', encUserObj);
+        if (setObjectId != undefined) {
+          setObjectId(email);
         }
-        if (typeof localStorage !== 'undefined' && typeof document !== 'undefined') {
-          document.cookie = `UserToken=${encTok};path=/;`;
-          let routeToUrl = getRouteToUrlFromCookie();
-          if (routeToUrl !== '' && routeToUrl != null) {
-            router.push(decodeURIComponent(routeToUrl));
-          } else router.push('/');
-        }
+        router.push('/');
       } else {
         setIsLoggingIn(false);
         setIfUnauthorised(true);
@@ -163,76 +114,34 @@ const Login = (props: LoginProps): JSX.Element => {
   const heading = targetItems?.title?.jsonValue?.value?.split('<br>');
   return (
     <>
-      <div className={loginCss.ThemeSwitcher}>
-        <ThemeSwitcher />
-      </div>
-      <div className={`${loginCss.container} ${darkMode && darkTheme.grey_1}`}>
+      <div className={loginCss.container}>
         <div className={loginCss.leftContainer}>
-          <div className={loginCss.leftGrid}>
-            <div className={loginCss.welcomeText}>
-              <div className={loginCss.welcomeTextImage}>
-                <NextImage
-                  field={targetItems?.image?.jsonValue?.value}
-                  editable={true}
-                  width={50}
-                  height={50}
-                />
-              </div>
-              <h5 className={`${darkMode && darkTheme.text_green}`}>
-                {heading ? heading[0] : 'Welcome,'}
-                <br />
-                {heading ? heading[1] : 'Please Login Here'}
-              </h5>
-              <div
-                className={`${loginCss.welcomeTextDescription} ${darkMode && darkTheme.text_light}`}
-              >
-                {targetItems?.description?.jsonValue?.value}
-              </div>
+          <div className={loginCss.welcomeText}>
+            <div className={loginCss.welcomeTextImage}>
+              <NextImage
+                field={targetItems?.image?.jsonValue?.value}
+                editable={true}
+                width={30}
+                height={30}
+              />
+            </div>
+            <h2>
+              {heading ? heading[0] : 'Welcome,'}
+              <br />
+              {heading ? heading[1] : 'Please Login Here'}
+            </h2>
+            <div className={loginCss.welcomeTextDescription}>
+              {targetItems?.description?.jsonValue?.value}
             </div>
           </div>{' '}
-          <div className={loginCss.rightGrid}>
-            <div className={loginCss.rightGridBox}>
-              <div className={loginCss.img1}>
-                <NextImage
-                  field={
-                    targetItems?.loginFrameImageList?.targetItems[0]?.imageLogin?.jsonValue?.value
-                  }
-                  height={150}
-                  width={150}
-                />
-              </div>
-              <div className={loginCss.img2}>
-                <NextImage
-                  field={
-                    targetItems?.loginFrameImageList?.targetItems[1]?.imageLogin?.jsonValue?.value
-                  }
-                  height={150}
-                  width={150}
-                />
-              </div>
-              <div className={loginCss.img3}>
-                <NextImage
-                  field={
-                    targetItems?.loginFrameImageList?.targetItems[2]?.imageLogin?.jsonValue?.value
-                  }
-                  height={150}
-                  width={150}
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
-        <div className={`${loginCss.rightContainer} ${darkMode && darkTheme.grey_1}`}>
-          <div
-            className={`${loginCss.formContainer} ${darkMode && darkTheme.grey_3} ${
-              darkMode && loginCss.formDarkBorder
-            }`}
-          >
+        <div className={loginCss.rightContainer}>
+          <div className={loginCss.formContainer}>
             <form className={loginCss.login} onSubmit={(e) => onSubmitHandler(e)}>
               <div className={loginCss.loginField}>
                 <i className="login__icon fas fa-user"></i>
-                <label className={`${loginCss.label} ${darkMode && darkTheme.text_light}`}>
+                <label className={loginCss.label}>
                   {targetItems?.userNameLabel?.jsonValue?.value}
                 </label>
                 <input
@@ -242,14 +151,16 @@ const Login = (props: LoginProps): JSX.Element => {
                   className={loginCss.loginInput}
                 />
                 {emailError ? (
-                  <span className={loginCss.error}>*{emailValidationMessage}</span>
+                  <span className={loginCss.error}>
+                    * {targetItems?.userNameLabel?.jsonValue?.value} Field is empty
+                  </span>
                 ) : (
                   ''
                 )}
               </div>
               <div className={loginCss.loginField}>
                 <i className="login__icon fas fa-lock"></i>
-                <label className={`${loginCss.label} ${darkMode && darkTheme.text_light}`}>
+                <label className={loginCss.label}>
                   {targetItems?.passwordLabel?.jsonValue?.value}
                 </label>
                 <input
@@ -259,11 +170,13 @@ const Login = (props: LoginProps): JSX.Element => {
                   className={loginCss.loginInput}
                 />
                 {passwodError ? (
-                  <span className={loginCss.error}>*{passwordValidationMessage}</span>
+                  <span className={loginCss.error}>
+                    * {targetItems?.passwordLabel?.jsonValue?.value} Field is empty
+                  </span>
                 ) : (
                   ''
                 )}
-                <div style={{ height: '10px' }}>
+                <div style={{ height: '25px' }}>
                   {' '}
                   {ifUnAuthorised ? (
                     <span style={{ fontWeight: 1000, color: 'red', fontSize: '12px' }}>
@@ -276,9 +189,7 @@ const Login = (props: LoginProps): JSX.Element => {
                 </div>
                 <div className={loginCss.forgotPassword}>
                   <Link href={'/forgotPassword'}>
-                    {targetItems?.forgotPasswordLabel?.jsonValue?.value
-                      ? targetItems.forgotPasswordLabel.jsonValue.value
-                      : 'Forgot Password?'}
+                  {targetItems?.forgotPasswordLabel?.jsonValue?.value ? targetItems.forgotPasswordLabel.jsonValue.value : 'Forgot Password?'}
                   </Link>
                 </div>
               </div>
@@ -309,7 +220,7 @@ const Login = (props: LoginProps): JSX.Element => {
                 ''
               )} */}
             </form>
-            <div className={`${loginCss.loginOptionContainer} ${darkMode && darkTheme.text_green}`}>
+            <div className={loginCss.loginOptionContainer}>
               or sign in with other accounts?
               <div className={loginCss.otherLoginContainer}>
                 <div className={loginCss.otherLogin}>Google</div>
@@ -319,17 +230,11 @@ const Login = (props: LoginProps): JSX.Element => {
               </div>
             </div>
             <div className={loginCss.formContainerBottom}>
-              <div className={`${loginCss.formContainerButton} ${darkMode && darkTheme.greenBg}`}>
-                <div className={loginCss.text}>
-                  {targetItems?.dontHaveAccountLabel?.jsonValue?.value}
-                </div>
-                <div className={loginCss.btn}>
-                  <Link href={'/register'}>
-                    {targetItems?.registerHereLabel?.jsonValue?.value
-                      ? targetItems.registerHereLabel.jsonValue.value
-                      : 'Register'}
-                  </Link>
-                </div>
+              <div className={loginCss.text}>
+                {targetItems?.dontHaveAccountLabel?.jsonValue?.value}
+              </div>
+              <div className={loginCss.btn}>
+                <Link href={'/register'}>{targetItems?.registerHereLabel?.jsonValue?.value ? targetItems.registerHereLabel.jsonValue.value : 'Register'}</Link>
               </div>
             </div>
             {/* <div className="social-icons">
@@ -349,6 +254,9 @@ const Login = (props: LoginProps): JSX.Element => {
     </>
   );
 };
+
+
+
 
 // export default withDatasourceCheck()<LoginProps>(Login);
 export default Login;

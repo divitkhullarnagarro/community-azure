@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React from 'react';
 import Head from 'next/head';
 import {
   Placeholder,
@@ -6,8 +6,6 @@ import {
   getPublicUrl,
   LayoutServiceData,
 } from '@sitecore-jss/sitecore-jss-nextjs';
-import { useRouter } from 'next/router';
-import WebContext from './Context/WebContext';
 
 // Prefix public assets with a public URL to enable compatibility with Sitecore editors.
 // If you're not supporting Sitecore editors, you can remove this.
@@ -19,18 +17,7 @@ interface LayoutProps {
 
 const Layout = ({ layoutData }: LayoutProps): JSX.Element => {
   const { route } = layoutData.sitecore;
-  let ogimage: any = route?.fields?.ogImage?.value;
-  ogimage = ogimage?.src;
-  let twitterImage: any = route?.fields?.twitterImage?.value;
-  twitterImage = twitterImage?.src;
-  let twitterCard: any = route?.fields?.twitterCard?.value;
-  twitterCard = twitterCard?.src;
-  let href = '';
-  if (typeof window !== 'undefined') {
-    href = window?.location?.href;
-  }
-  const { darkMode } = { ...useContext(WebContext) };
-  const router = useRouter();
+
   return (
     <>
       <Head>
@@ -42,22 +29,7 @@ const Layout = ({ layoutData }: LayoutProps): JSX.Element => {
 
         <script src="https://cdn.jsdelivr.net/npm/react-bootstrap@next/dist/react-bootstrap.min.js"></script>
 
-        <meta property="og:locale" content={router?.locale} />
-        <meta property="og:type" content={route?.fields?.ogType?.value.toString()} />
-        <meta property="og:url" content={href} />
-        <meta property="og:title" content={route?.fields?.ogTitle?.value.toString()} />
-        <meta property="og:description" content={route?.fields?.ogDescription?.value.toString()} />
-        <meta property="og:image" content={ogimage} />
-        <meta property="og:image:width" content={route?.fields?.ogImageWidth?.value.toString()} />
-        <meta property="og:image:height" content={route?.fields?.ogImageHeight?.value.toString()} />
-        <meta property="twitter:card" content={route?.fields?.twitterCard?.value.toString()} />
-        <meta property="twitter:title" content={route?.fields?.twitterTitle?.value.toString()} />
-        <meta
-          property="twitter:description"
-          content={route?.fields?.twitterDescription?.value.toString()}
-        />
-        <meta property="twitter:image" content={twitterImage} />
-        <meta property="twitter:url" content={href} />
+        <script>var Alert = ReactBootstrap.Alert;</script>
       </Head>
 
       {/*
@@ -69,15 +41,8 @@ const Layout = ({ layoutData }: LayoutProps): JSX.Element => {
       */}
       <VisitorIdentification />
       {/* root placeholder for the app, which we add components to using route data */}
-      <div
-        className="header"
-        style={darkMode ? { background: '#242526' } : { background: '#FFFFFF' }}
-      >
-        {route && <Placeholder name="jss-header" rendering={route} />}
-      </div>
-      <div className={darkMode ? 'main darkMode_bg' : 'main'}>
-        {route && <Placeholder name="jss-main" rendering={route} />}
-      </div>
+      <div>{route && <Placeholder name="jss-header" rendering={route} />}</div>
+      <div>{route && <Placeholder name="jss-main" rendering={route} />}</div>
       <div>{route && <Placeholder name="jss-footer" rendering={route} />}</div>
     </>
   );

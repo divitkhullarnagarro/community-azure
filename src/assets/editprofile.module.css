@@ -7,15 +7,6 @@
   background: url('../assets/images/ProfileCover.jpg') no-repeat;
   background-size: cover;
 }
-.groupHeaderWrapper {
-  width: 100%;
-  height: 64vh;
-  margin: 10px;
-  padding: 10px;
-  background-color: rgb(242, 240, 240);
-  background: url('../assets/images/groupBackground.svg') no-repeat;
-  background-size: cover;
-}
 
 .content {
   display: flex;
@@ -23,17 +14,9 @@
   height: 30vh;
   align-items: flex-end;
 }
-.groupContent {
-  display: flex;
-  justify-content: space-between;
-  height: 64vh;
-  align-items: flex-end;
-}
 
 .profileImage {
   border: 2px solid black;
-  display: flex;
-  /* border-radius: 10px; */
 }
 
 .leftSection {
@@ -53,77 +36,13 @@
 .followers {
   display: flex;
   justify-content: space-between;
-  font-size: small;
-  color: black;
-  text-shadow: 1px 1px gray;
 }
 
 .name {
   font-weight: bold;
-  color: black;
-  text-shadow: 1px 1px gray;
 }
 
 .editProfileBtn {
   margin-bottom: 20px;
   margin-right: 10px;
-}
-
-.joinButton {
-  position: relative;
-  bottom: 14px;
-  color: black;
-  border: 0.5px solid black;
-}
-.joinButton:hover {
-  border: 0.5px solid rgb(152, 148, 148);
-}
-.leaveButton {
-  position: relative;
-  bottom: 14px;
-  color: red;
-  border: 0.5px solid black;
-}
-.leaveButton:hover {
-  border: 0.5px solid rgb(152, 148, 148);
-}
-.groupName {
-  position: relative;
-  font-size: 32px;
-  font-weight: 500;
-  font-family: initial;
-}
-/* .groupPageLogo {
- 
-} */
-@media only screen and (max-width: 640px) {
-  .groupHeaderWrapper {
-    height: 16vh;
-  }
-  .groupContent {
-    height: 16vh;
-  }
-  .joinButton {
-    height: 30px;
-    width: 90px;
-    font-size: 10px;
-  }
-  .joinButton > svg {
-    height: 14px;
-    width: 14px;
-  }
-  .leaveButton {
-    height: 30px;
-    width: 90px;
-    font-size: 10px;
-  }
-  .leaveButton > svg {
-    height: 14px;
-    width: 14px;
-  }
-  .leftSection {
-    height: 56px;
-    width: 154px;
-    margin-bottom: 6px;
-  }
 }

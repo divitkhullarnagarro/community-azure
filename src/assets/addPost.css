@@ -1,520 +1,135 @@
 .AddPostContainer {
-  background-color: white;
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
+    background-color: white;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .AddPostEditorContainer {
-  background-color: white;
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-  transition: height 0.4s cubic-bezier(1, 0.05, 0.17, 0.95) 0s;
+    background-color: white;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: height 0.4s cubic-bezier(1, 0.05, 0.17, 0.95) 0s;
 }
 
 .AddPostContainer .addPostButton {
-  width: 100%;
-  margin-left: 20px;
-  border-color: white;
-  background-color: white;
-  color: grey;
-  cursor: pointer;
-  border: none;
+    width: 100%;
+    margin-left: 20px;
+    border-color: white;
+    background-color: white;
+    color: grey;
+    cursor: pointer;
+    border: none;
 }
 
 .AddPostContainer .addPostButton h4 {
-  float: left;
+    float: left;
 }
 
 .AddPostField {
-  margin: 20px;
+    margin: 20px;
 }
 
 .AddPostItems {
-  margin: 20px;
-  display: flex;
-  justify-content: space-evenly;
+    margin: 20px;
+    display: flex;
+    justify-content: space-evenly;
 }
 
 .AddPostItems button {
-  padding: 10px;
-  width: 125px;
-  height: 50px;
-  background-color: white;
-  border: none;
-  border-radius: 10px;
-}
-
-.AddPostItems button:hover {
-  background-color: rgb(171, 166, 166);
-}
-
-.AddPostItems img {
-  margin-left: 10px;
-}
-
-.AllPostscontainer {
-  max-width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.postHead {
-  display: none;
-}
-
-.postHeading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 15px;
-}
-
-.postHeaderLeft {
-  display: flex;
-  align-items: center;
-}
-
-.postHeaderRight {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.postDetailContainer {
-  margin-left: 20px;
-}
-
-.blogHeading {
-  font-size: 28px;
-  line-height: 1.2;
-  font-weight: 600;
-  margin: 0 10px 10px 10px;
-  font-size: '50px';
-  margin: '8px 16px';
-}
-
-.postDescription {
-  padding: 15px;
-  font-size: 14px;
-  line-height: 32px;
-  color: #091329;
-}
-
-.postDescription * {
-  margin: 0;
-  line-height: 1.4;
-  font-size: 14px !important;
-  background: transparent !important;
-}
-
-.darkModeDescription * {
-  color: #b8b8b8 !important;
-}
-
-.postDescription p {
-  margin: 0;
-}
-
-.postDescription img {
-  max-width: 100%;
-}
-
-.postActions {
-  display: flex;
-  gap: 100px;
-  justify-content: space-around;
-  position: relative;
-  margin-bottom: 10px;
-}
-
-.postActions button {
-  padding: 10px;
-  width: 70px;
-  height: 70px;
-  background-color: white;
-  border: none;
-  border-radius: 10px;
-}
-
-.postActions button:hover {
-  background-color: rgb(171, 166, 166);
-}
-
-.postContainer {
-  margin-bottom: 20px;
-  background-color: white;
-  position: relative;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.25);
-  border-radius: 6px;
-}
-
-.AddPostContainer .form-control:focus {
-  box-shadow: none;
-}
-
-.AddPostEditorContainer .form-control:focus {
-  box-shadow: none;
-}
-
-.docPreviewContainer .openPrevButton button:hover {
-  background-color: grey;
-}
-
-.AllPostscontainer::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-.CreatePollOptions::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
-/* 
-
-.postFooter {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.25rem;
-} */
-
-.postOwner {
-  margin: 0;
-  font-weight: 400;
-  font-size: 14px;
-  line-height: 18px;
-  color: #283895;
-}
-
-.postCreateDate {
-  display: flex;
-  align-items: center;
-  font-weight: 400;
-  font-size: 10px;
-  line-height: 13px;
-  color: #afb0b4;
-  margin: 0;
-}
-
-.postCreateDate img {
-  opacity: 0.4;
-  margin-right: 4px;
-}
-
-.postUserImage {
-  width: 40px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 50%;
-  cursor: pointer;
-}
-
-.postMoreOptionsImage {
-  width: 1.375rem;
-}
-
-.postCrossImage {
-  width: 20px;
-  /* margin-left: 1.875rem; */
-}
-
-.postLikeImage {
-  width: 1.5rem;
-}
-
-.postCommentImage {
-  width: 1.5rem;
-}
-
-.postShareImage {
-  width: 1.5rem;
-}
-
-.postLikeCount {
-  font-weight: 600;
-}
-
-.postCommentCount {
-  font-weight: 600;
-}
-
-.commentUserImage {
-  /* width: 60px;
-  margin-right: 10px; */
-  width: 30px;
-  margin-right: 10px;
-  height: 30px;
-  margin-left: 28px;
-  display: flex;
-  font-size: 10px;
-  font-weight: 500;
-  border-radius: 50%;
-}
-
-.postCommentButton {
-  margin-left: 10px;
-  border: none;
-  color: white;
-  background-color: #47d7ac;
-  border-radius: 5px;
-  font-weight: 500;
-  font-size: 12px;
-  padding: 5px 10px;
-}
-
-.closeButton.btn {
-  margin-left: 10px;
-  border: none;
-  color: white;
-  background-color: #47d7ac;
-  border-radius: 5px;
-  font-weight: 500;
-  padding: 5px 10px;
-  font-size: 16px;
-}
-
-.commentContainer {
-  position: relative;
-  width: 100%;
-}
-
-.upvoteDownvoteContainer {
-  position: absolute;
-  width: 50px;
-  height: 30px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  right: 0;
-  top: -10px;
-  cursor: pointer;
-  gap: 5px;
-  background-color: rgb(202, 197, 197);
-}
-
-.loadCommentContainer {
-  overflow-y: auto;
-}
-
-.eventTypeDropdown button {
-  width: 160px;
-}
-
-.loadCommentContainer::-webkit-scrollbar {
-  width: 8px;
-}
-
-.loadCommentContainer::-webkit-scrollbar-track {
-  border-radius: 10px;
-  background-color: #efefef;
-}
-
-.loadCommentContainer::-webkit-scrollbar-thumb {
-  background-color: #c2c2c2;
-  border-radius: 4px;
-}
-
-/* Comment section */
-.commentSection {
-  padding: 15px 15px 2px;
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-  width: 100%;
-}
-
-.commentReply {
-  border: 0;
-  font-size: 12px;
-  margin: 0;
-  color: #000e46;
-  font-weight: 500;
-  background-color: transparent;
-}
-
-.commentPostDate {
-  font-weight: 400;
-  font-size: 10px;
-  line-height: 13px;
-  color: #afb0b4;
-}
-
-@media only screen and (max-width: 640px) {
-  .postOwner {
-    font-weight: 750;
-    color: navy;
-    font-size: 0.75rem;
-  }
-
-  .postUserImage {
-    width: 2rem;
-  }
-
-  .postCreateDate {
-    font-weight: 700;
-    color: grey;
-    font-size: 0.75rem;
-  }
-
-  .postMoreOptionsImage {
-    width: 1.25rem;
-  }
-
-  .postCrossImage {
-    width: 20px;
-  }
-
-  .postLikeImage {
-    width: 1.25rem;
-  }
-
-  .postCommentImage {
-    width: 1.25rem;
-  }
-
-  .postShareImage {
-    width: 1.25rem;
-  }
-
-  .postActions {
-    display: flex;
-    gap: 0.125rem;
-    justify-content: space-around;
-    margin-bottom: 0.125rem;
-  }
-
-  .postActions button {
-    padding: 5px;
-    width: 50px;
+    padding: 10px;
+    width: 125px;
     height: 50px;
     background-color: white;
     border: none;
     border-radius: 10px;
-  }
-
-  .postLikeCount {
-    font-weight: 600;
-    font-size: 0.625rem;
-  }
-
-  .postCommentCount {
-    font-weight: 600;
-    font-size: 0.625rem;
-  }
-
-  .commentUserImage {
-    width: 1.875rem;
-    margin-right: 0.3125rem;
-  }
-
-  .postCommentButton {
-    margin-left: 5px;
-  }
 }
 
-.likecomments {
-  height: 0.95rem;
-  width: 0.95rem;
-  margin-bottom: 6px;
+.AddPostItems button:hover {
+    background-color: rgb(171, 166, 166);
 }
 
-.modalContainer {
-  height: 30px;
-  width: 100%;
-  background-color: red;
+.AddPostItems img {
+    margin-left: 10px;
 }
 
-.commentHeadingTop {
-  font-size: 15px;
-  font-weight: 500;
-  margin: 0 0 2px 0;
-  color: #283895;
-}
 
-.commentHeading {
-  font-size: 13px;
-  font-weight: 500;
-  color: #091329;
-  margin: 0;
-}
-
-@media screen and (max-width: 600px) {
-  .postActions {
-    gap: 3.125rem;
-  }
-
-  .postFooter {
-    gap: 3.125rem;
-  }
-}
-
-@media screen and (max-width: 660px) {
-  .likesAndComments {
+.AllPostscontainer {
+    max-width: 100%;
     display: flex;
-    gap: 0.125rem;
-    font-size: 0.8125rem;
-  }
+    flex-direction: column;
 }
 
-@media screen and (max-width: 550px) {
-  .postActions button {
-    height: 3.125rem;
-    width: 3.125rem;
-    border-radius: 0.625rem;
-  }
-
-  .postLikeImage {
-    height: 1.25rem;
-    width: 1.25rem;
-  }
-}
-
-@media screen and (max-width: 500px) {
-  .postActions {
-    gap: 2.5rem;
-  }
-
-  .likesAndComments {
-    font-size: 0.9375rem;
-  }
-
-  /* .postFooter {
-    gap: 1.875rem;
+.postHeading {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
-  } */
+    margin-bottom: 20px;
 }
 
-@media screen and (max-width: 470px) {
-  .postActions button {
-    height: 2.5rem;
-    width: 2.5rem;
-    border-radius: 0.625rem;
-  }
+.postHeaderLeft {
+    display: flex;
+    align-items: center;
+}
 
-  .postLikeImage {
-    height: 1.25rem;
-    width: 1.25rem;
-  }
+.postHeaderRight {
+    display: flex;
+    align-items: center;
+}
 
-  .postFooter {
-    gap: 0.625rem;
-  }
+.postDetailContainer {
+    margin-left: 20px;
+}
 
-  .postActions {
-    gap: 1.25rem;
-  }
+.postContent {
+    margin: 30px 30px 30px 0px;
+}
 
-  .commentHeadingTop {
-    font-size: 13px;
-    margin-left: 5px;
-  }
+.postActions {
+    display: flex;
+    gap: 100px;
+    justify-content: space-around;
+}
 
-  .commentHeading {
-    font-size: 11px;
-    margin-left: 7px;
-  }
+.postActions button {
+    padding: 10px;
+    width: 70px;
+    height: 70px;
+    background-color: white;
+    border: none;
+    border-radius: 10px;
+}
+
+.postActions button:hover {
+    background-color: rgb(171, 166, 166);
+}
+
+.postContainer {
+    margin-top: 20px;
+    background-color: white;
+    padding: 20px;
+}
+
+.AddPostContainer .form-control:focus {
+    box-shadow: none;
+}
+
+.AddPostEditorContainer .form-control:focus {
+    box-shadow: none;
+}
+
+.docPreviewContainer .openPrevButton button:hover {
+    background-color: grey
+}
+
+.AllPostscontainer::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+.postFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }

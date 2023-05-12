@@ -1,110 +1,32 @@
-.dropdownMenu{
-  padding: 0;
-  box-shadow: 1px 1px 2px rgba(0,0,0,0.25);
-  overflow: hidden;
-}
-
-.dropdownItem{
-  padding: 10px;
-  position: relative;
-}
-
-.dropdownItem:after {
-  content: "" !important;
-  display: inline-block;
-  width: 85%;
-  height: 1px;
-  border-bottom: 1px solid #DFDFDF;
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50% );
-}
-
-.overlayItem {
-  display: flex;
-  align-items: center;
-}
-
-.dropdownImage {
-  width: 25px;
-  height: 25px;
-}
 
 .sharePopups {
   display: flex;
-  background-color: #ffffffea;
-  border-radius: 4px;
+  background-color: #f7ffff;
+  border-radius: 8px;
+  height: 141px;
+  width: 169px;
   position: absolute;
-  bottom: 20px;
-  right: -250%;
+  top: 8rem;
+  left: 11rem;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 10px;
-  border: 1px solid #a5a9ae;
 }
-.sharePopup {
+.sharePopup{
   display: flex;
   flex-direction: row;
-  width: 100%;
+  /* background-color: bisque; */
+  width: 150px;
   align-items: center;
-  padding: 5px 0;
+  padding: 4px;
+  margin-left: 4px;
 }
-.sharePopup:hover {
+.sharePopup:hover{
   background-color: rgb(237 239 245);
   border-radius: 4px;
 }
-.targetIcon {
+.sharePopup a{
   text-decoration: none;
-  margin-left: 10px;
-  font-size: 12px;
-  line-height: 16px;
-  color: #A5A9AE;
-}
-.targetIcon::after {
-  visibility: hidden;
-}
-
-.dropdownBtn {
-  background-color: transparent !important;
-  border: none;
-  width: auto;
-  padding: 0;
-  height: 18px;
-}
-
-.darkModeActive::after {
-  border-bottom: 1px solid #313131;
-}
-
-.dropdownBtn::after {
-  display: none;
-}
-
-@media screen and (max-width: 700px) {
-  .sharePopups {
-    top: -8rem;
-    left: 14rem;
-  }
-}
-
-@media screen and (max-width: 520px) {
-  .sharePopups {
-    top: -8rem;
-    left: 12rem;
-  }
-}
-
-@media screen and (max-width: 500px) {
-  .sharePopups {
-    top: -8rem;
-    left: 12rem;
-  }
-}
-@media screen and (max-width: 470px) {
-  .sharePopups {
-    top: -8rem;
-    left: 9rem;
-  }
+  color: black;
+  margin-left: 6px;
 }

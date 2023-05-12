@@ -11,8 +11,6 @@ type contextType = {
   setObjectId: React.Dispatch<React.SetStateAction<string>>;
   userObject: any;
   setUserObject: React.Dispatch<React.SetStateAction<any>>;
-  darkMode: boolean;
-  setDarkMode: React.Dispatch<React.SetStateAction<boolean>>;
 };
 const WebContext = React.createContext<contextType | null | undefined>(null);
 

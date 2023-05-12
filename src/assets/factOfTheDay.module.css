@@ -1,68 +1,21 @@
 .cardContainer {
-  background: transparent;
-  position: relative;
+  width: 95%;
+  background-color: rgb(227, 227, 227);
+  padding: 0.9375rem;
 }
 .cardbody {
   display: flex;
   flex-direction: column;
   background-color: #fff;
   width: 100%;
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.25);
-}
-
-.cardText {
-  padding: 10px 16px;
 }
 
 .cardTitle {
-  font-size: 18px;
-  font-weight: 500;
-  line-height: 24px;
-  color: #000E46;
+  padding: 0.5rem 0.3125rem 0.3125rem 0.9375rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
 }
 
 .cardDescription {
-  margin-top: 5px;
-  font-weight: 500;
-  font-size: 14px;
-  line-height: 18px;
-  max-height: 100px;
-  color: #82888F;
-  display: -webkit-box;
-  max-width: 100%;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.tooltip {
-  width: 100%;
-    position: absolute;
-    left: 50%;
-    top: 100%;
-    transform: translate(-50%, 0);
-    font-size: 12px;
-    background: #000000;
-    color: #fff;
-    padding: 10px;
-    border-radius: 6px;
-    z-index: 1;
-    visibility: hidden;
-}
-
-.tooltip:after {
-  content: "";
-  position: absolute;
-  top: -9px;
-  left: 10px;
-  display: inline-block;
-  border-left: 10px solid transparent;
-  border-bottom: 10px solid #000000;
-  border-right: 10px solid transparent;
-}
-
-.cardDescription:hover + .tooltip {
-  visibility:visible;
+  padding: 0rem 0rem 0.3125rem 0.9375rem;
 }

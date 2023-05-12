@@ -1,24 +1,17 @@
 import { Field, NextImage } from '@sitecore-jss/sitecore-jss-nextjs';
 import { ComponentProps } from 'lib/component-props';
 import Profile from '../assets/images/ProfilePic.jpeg';
-// import PeopleProfile from '../assets/images/PeopleYouMayKnowProfileImage.png';
-import DropArrow from '../assets/images/droparrow.png';
-import people from '../assets/images/people.png';
 import styles from '../assets/peopleyoumayknow.module.css';
-// import style from '../assets/fonts.css';
 import FollowUnfollowButton from './FollowUnfollowButton';
 import Link from 'next/link';
 import { useState, useContext, useEffect } from 'react';
 import WebContext from '../Context/WebContext';
 import peopleYouMayKnowCall from 'src/API/peopleYouMayKnowCall';
+import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
-// import { useRouter } from 'next/router';
+import { useRouter } from 'next/router';
 import { Button, Card } from 'react-bootstrap';
-import Skeleton from 'react-loading-skeleton';
-import 'react-loading-skeleton/dist/skeleton.css';
-import darkModeCss from '../assets/darkTheme.module.css';
-import { viewProfileLinkUrl } from 'assets/helpers/constants';
 
 type PeopleYouMayKnowProps = ComponentProps & {
   fields: {
@@ -30,147 +23,105 @@ type peopleYouMayKnowFields = {
   objectId: string;
   firstName: Field<string>;
   lastName: Field<string>;
-  profilePictureUrl: string;
+  imageData: Field<string>;
   speciality: Field<string>;
   city: Field<string>;
 };
 
 const PeopleYouMayKnow = (props: PeopleYouMayKnowProps): JSX.Element => {
   console.log('people you may know', props);
-  // const router = useRouter();
+  const router = useRouter();
   const { Title, LinkLabel, IsFullList } = props?.params;
   const [peopleYouMayKnowList, setPeopleYouMayKnowList] = useState<peopleYouMayKnowFields[]>([]);
-  const { userToken, setUserToken, darkMode } = { ...useContext(WebContext) };
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const { userToken, setUserToken } = { ...useContext(WebContext) };
+
   const [isFullPage] = useState(IsFullList === '1');
   const getPeopleYouMayKnowList = async (userToken: string | undefined) => {
     let response = await peopleYouMayKnowCall(userToken);
-    console.log('peopleYouMayKnowList', response);
-    if (response?.data?.success) {
-      setIsDataLoaded(true);
-      setPeopleYouMayKnowList(response?.data?.data);
-    }
+    setPeopleYouMayKnowList(response?.data?.data);
   };
-  const skeletonDummyArr = [1, 2, 3, 4, 5];
+
+  const sliderSettings = {
+    rows: 1,
+    infinite: false,
+    slidesToShow: 6,
+    slidesToScroll: 1,
+    responsive: [
+      {
+        breakpoint: 1024,
+        settings: {
+          slidesToShow: 2,
+        },
+      },
+      {
+        breakpoint: 600,
+        settings: {
+          slidesToShow: 1,
+        },
+      },
+    ],
+  };
+
   const HalfPagePeopleYouMayKnow = () => {
     return (
-      <div className={`${styles.wrapper} ${darkMode ? darkModeCss.grey_2 : ''}`}>
+      <div
+        className={styles.wrapper}
+        style={{
+          maxHeight: '590px',
+          height: 'max-content',
+        }}
+      >
         <div className={styles.header}>
-          <div className={`${styles.heading} ${darkMode ? darkModeCss.text_green : ''}`}>
-            {Title}
-          </div>
-          {LinkLabel ? (
-            <Link href={'/peopleyoumayknow'} className={styles.linkHeader} passHref={true}>
-              <span className={styles.link}> {LinkLabel}</span>
-            </Link>
-          ) : (
-            <></>
-          )}
+          <div className={styles.heading}>{Title}</div>
+          {LinkLabel ? <Link href={'/peopleyoumayknow'}>{LinkLabel}</Link> : <></>}
         </div>
-        <div className={styles.listContainer}>
-          {peopleYouMayKnowList?.length > 0 ? (
-            peopleYouMayKnowList?.slice(0, 5).map((item) => {
-              return (
-                <div key={item?.objectId} className={styles.item}>
-                  <Link href={`${viewProfileLinkUrl}${item.objectId}`} passHref={true}>
-                    <img
-                      className={styles.img}
-                      src={item?.profilePictureUrl ? item?.profilePictureUrl : Profile.src}
-                      // editable={true}
-                      height={40}
-                      width={40}
-                    />
-                  </Link>
-                  <div>
-                    <div className={`${styles.name} ${darkMode ? darkModeCss.text_light : ''}`}>
-                      {item?.firstName + ' ' + item?.lastName}
-                    </div>
-                  </div>
-                  <div className={styles.button}>
-                    <FollowUnfollowButton userName={item?.objectId} />
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <></>
-          )}
+        <div className={styles.listWrapper}>
+          <Slider className="slider" {...sliderSettings}>
+            {peopleYouMayKnowList?.length > 0 ? (
+              peopleYouMayKnowList.slice(0, 9).map((item) => {
+                return <PeopleYouMayKnowHalfPageItem {...item} />;
+              })
+            ) : (
+              <></>
+            )}
+          </Slider>
         </div>
       </div>
     );
   };
-  // for loading skeleton
-  const HalfPagePeopleYouMayKnowSkeleton = () => {
+
+  const PeopleYouMayKnowHalfPageItem = (item: peopleYouMayKnowFields) => {
     return (
-      <div className={styles.wrapper}>
-        <div className={styles.header}>
-          <div className={styles.cardloaderHeader}>
-            <Skeleton height={30} />
+      <div key={item?.objectId} className={styles.itemHalfPage}>
+        <NextImage
+          contentEditable={true}
+          field={Profile ?? item?.imageData?.value}
+          height={200}
+          width={100}
+        ></NextImage>
+        <div className={styles.detailsContainer}>
+          <div className={styles.firstRow}>
+            <div className={styles.name}>{item?.firstName + ' ' + item?.lastName}</div>
+            <div className={styles.button}>
+              <FollowUnfollowButton userName={item?.objectId} />
+            </div>
           </div>
-        </div>
-        <div className={styles.listContainer}>
-          {skeletonDummyArr?.length > 0 ? (
-            skeletonDummyArr?.slice(0, 5).map((item: any) => {
-              return (
-                <div key={item} className={styles.item}>
-                  <Skeleton height={40} width={40} circle={true} />
-                  <div className={styles.cardloaderDetails}>
-                    <Skeleton className={styles.name} height={30} />
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <></>
-          )}
         </div>
       </div>
     );
   };
-  // const PeopleYouMayKnowHalfPageItem = (item: peopleYouMayKnowFields) => {
-  //   return (
-  //     <div key={item?.objectId} className={styles.itemHalfPage}>
-  //       <NextImage
-  //         contentEditable={true}
-  //         field={Profile ?? item?.imageData?.value}
-  //         height={200}
-  //         width={100}
-  //       ></NextImage>
-  //       <div className={styles.detailsContainer}>
-  //         <div className={styles.firstRow}>
-  //           <div className={styles.name}>{item?.firstName + ' ' + item?.lastName}</div>
-  //           <div className={styles.button}>
-  //             <FollowUnfollowButton userName={item?.objectId} />
-  //           </div>
-  //         </div>
-  //       </div>
-  //     </div>
-  //   );
-  // };
 
   const PeopleYouMayKnowFullPageItem = (item: peopleYouMayKnowFields) => {
     return (
-      <Card
-        className={`${styles.cardItem} ${darkMode ? darkModeCss.grey_1 : ''} ${
-          darkMode ? darkModeCss.text_light : ''
-        }`}
-      >
+      <Card className={styles.cardItem}>
         <div className={styles.imageContainer}>
-          <Link href={`${viewProfileLinkUrl}${item?.objectId}`}>
-            <img
-              className={styles.imgProfile}
-              contentEditable={true}
-              src={item.profilePictureUrl ? item.profilePictureUrl : Profile.src}
-            />
-          </Link>
+          <NextImage contentEditable={true} field={Profile} height={140} width={250}></NextImage>
         </div>
         <Card.Body>
           <Card.Title className={styles.cardTitle}>
             {item?.firstName + ' ' + item?.lastName}
           </Card.Title>
-          {/* <Card.Text className={styles.cardText}>{`${item?.speciality ?? ''} ${item?.speciality ? ' | ' : ''}  ${
-            item?.city ?? ''
-          }`}</Card.Text> */}
+          <Card.Text>{`${item?.speciality} |  ${item?.city}`}</Card.Text>
           <FollowUnfollowButton userName={item?.objectId} />
         </Card.Body>
       </Card>
@@ -181,10 +132,8 @@ const PeopleYouMayKnow = (props: PeopleYouMayKnowProps): JSX.Element => {
 
   const PeopleYouMayKnowList = () => {
     return (
-      <div className={`${styles.mainFullPageItemWrapper} ${darkMode ? darkModeCss.grey_3 : ''}`}>
-        <h2 className={`${styles.listHeaderLabel} ${darkMode ? darkModeCss.text_light : ''}`}>
-          {Title ?? 'People You May Know'}
-        </h2>
+      <div className={styles.mainFullPageItemWrapper}>
+        <h2 className={styles.listHeaderLabel}>{Title ?? 'People You May Know'}</h2>
         <div className={styles.newgrid}>
           {peopleYouMayKnowList?.length > 0 ? (
             peopleYouMayKnowList.slice(0, numItems).map((item) => {
@@ -196,23 +145,23 @@ const PeopleYouMayKnow = (props: PeopleYouMayKnowProps): JSX.Element => {
         </div>
         {peopleYouMayKnowList === undefined || numItems >= peopleYouMayKnowList?.length ? null : (
           <Button
+            className={styles.seeMoreBtn}
             style={{
-              fontSize: '20px',
-              height: '40px',
-              backgroundColor: '#F9F9F9',
-              color: '#2A86FD',
+              width: '100%',
+              fontSize: '1.5rem',
+              height: '50px',
+              backgroundColor: 'white',
+              color: 'blue',
               border: 'none',
-              fontWeight: '500',
+              fontWeight: 'bold',
               textAlign: 'center',
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              margin: '20px auto',
             }}
-            onClick={() => setNumItems(numItems + 6)}
+            onClick={() => setNumItems(numItems + 5)}
           >
-            <span className={styles.seeMoreBtn}>See more</span>
-            <NextImage field={DropArrow} editable={true} />
+            See more...
           </Button>
         )}
       </div>
@@ -221,30 +170,25 @@ const PeopleYouMayKnow = (props: PeopleYouMayKnowProps): JSX.Element => {
 
   const SideNavbar = () => {
     return (
-      <div className={`${styles.sidenavbar} ${darkMode ? darkModeCss.grey_3 : ''}`}>
-        <div className={`${styles.rectContainer} ${darkMode ? darkModeCss.grey_1 : ''}`}>
-          <div className={styles.top}>
-            <span className={`${styles.logo} ${darkMode ? darkModeCss.text_light : ''}`}>
-              Suggestions
-            </span>
-          </div>
-          <div className={`${styles.center} ${darkMode ? styles.listHover : ''}`}>
-            <ul>
-              <button>
-                <li className={styles.rowItem}>
-                  <NextImage
-                    contentEditable={true}
-                    field={people}
-                    height={18}
-                    width={18}
-                  ></NextImage>
-                  <span className={`${darkMode ? darkModeCss.text_light : ''}`}>
-                    {Title ?? 'People You May Know'}
-                  </span>
-                </li>
-              </button>
-            </ul>
-          </div>
+      <div className={styles.sidenavbar}>
+        <div className={styles.top}>
+          <span className={styles.logo}>Suggestions</span>
+        </div>
+        <hr />
+        <div className={styles.center}>
+          <ul>
+            <button>
+              <li className={styles.rowItem}>
+                <NextImage
+                  contentEditable={true}
+                  field={Profile}
+                  height={18}
+                  width={18}
+                ></NextImage>
+                <span>{Title ?? 'People You May Know'}</span>
+              </li>
+            </button>
+          </ul>
         </div>
       </div>
     );
@@ -253,9 +197,9 @@ const PeopleYouMayKnow = (props: PeopleYouMayKnowProps): JSX.Element => {
   const FullPagePeopleYouMayKnow = () => {
     return (
       <div className={styles.mainContainer}>
-        {/* <div className={styles.backbtn}>
+        <div className={styles.backbtn}>
           <Button onClick={() => router.push('/')}>Back</Button>
-        </div> */}
+        </div>
         <div className={styles.container}>
           <div className={styles.left_column}>
             <SideNavbar />
@@ -294,7 +238,9 @@ const PeopleYouMayKnow = (props: PeopleYouMayKnowProps): JSX.Element => {
       {isFullPage ? (
         <FullPagePeopleYouMayKnow />
       ) : (
-        <>{isDataLoaded ? <HalfPagePeopleYouMayKnow /> : <HalfPagePeopleYouMayKnowSkeleton />}</>
+        <>
+          <HalfPagePeopleYouMayKnow />
+        </>
       )}
     </>
   );
